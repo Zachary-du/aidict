@@ -832,11 +832,7 @@ public struct HUDInlineAIChatView: View {
                         }
                     }
 
-                    Text(msg.content)
-                        .font(.system(size: 12))
-                        .lineSpacing(3)
-                        .textSelection(.enabled)
-                        .foregroundColor(.primary.opacity(0.92))
+                    AIMarkdownView(msg.content, baseFontSize: 12, textColor: .primary.opacity(0.92))
 
                     HStack(spacing: 10) {
                         Button(action: {
@@ -1019,11 +1015,7 @@ public struct SourceResultCard: View {
                         .lineSpacing(3)
                 } else if let ai = result.aiAnalysis {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(LocalizedStringKey(ai))
-                            .font(.system(size: 12))
-                            .foregroundColor(.primary.opacity(0.95))
-                            .lineSpacing(3)
-                            .textSelection(.enabled)
+                        AIMarkdownView(ai, baseFontSize: 12, textColor: .primary.opacity(0.95))
 
                         if let onFollowUp = onFollowUp {
                             VStack(alignment: .leading, spacing: 4) {

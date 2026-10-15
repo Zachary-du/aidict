@@ -825,7 +825,7 @@ function do_default_task() {
         git branch -M main 2>/dev/null || true
         git add -A
         git reset *.dmg *.zip 2>/dev/null || true
-        git commit -m "feat: 初始开源版本发布，支持权威词典与深度认知意象解析" 2>/dev/null || true
+        git commit -m "feat: 支持 AI 聊天与初解原生 Markdown 优雅排版渲染" 2>/dev/null || true
         if git push -u origin main 2>&1; then
             echo "   ✅ 成功推送至 GitHub 仓库: https://github.com/Zachary-du/aidict"
         else
