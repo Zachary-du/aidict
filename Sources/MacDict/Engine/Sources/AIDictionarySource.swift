@@ -85,11 +85,12 @@ public final class AIDictionarySource: DictionarySource, @unchecked Sendable {
                           userInfo: [NSLocalizedDescriptionKey: "AI 返回结果为空"])
         }
 
+        let isChinese = word.range(of: "\\p{Han}", options: .regularExpression) != nil
         return DictionaryResult(
             sourceId: id,
-            sourceName: name,
+            sourceName: isChinese ? "AI 中译英解析" : name,
             word: word,
-            definitions: [DefinitionItem(partOfSpeech: "AI 解析", meaning: aiText)],
+            definitions: [DefinitionItem(partOfSpeech: isChinese ? "中译英 · 地道表达" : "AI 解析", meaning: aiText)],
             aiAnalysis: aiText,
             status: .success
         )
@@ -105,6 +106,48 @@ public final class AIDictionarySource: DictionarySource, @unchecked Sendable {
         }
 
         let trimmed = word.trimmingCharacters(in: .whitespacesAndNewlines)
+        let isChinese = trimmed.range(of: "\\p{Han}", options: .regularExpression) != nil
+
+        if isChinese {
+            let isChineseSentence = trimmed.count >= 12 || trimmed.contains("。") || trimmed.contains("！") ||
+                                    trimmed.contains("？") || trimmed.contains("，")
+            if isChineseSentence {
+                return """
+                请将以下中文句子翻译为地道、自然的现代英语，并进行专业解析：
+                「\(trimmed)」
+
+                ### 1. 🌟 地道英文翻译
+                提供最自然地道的英文表达（可附口语与书面语不同译法）。
+
+                ### 2. 🔑 核心词汇与短语提炼
+                提炼句中对应的 2~3 个核心高阶英文词汇/短语，附音标、词性及简明释义。
+
+                ### 3. 💡 句型与中英思维差异
+                简析该句的核心语法句型或中英表达思维差异。
+                """
+            } else {
+                var prompt = """
+                请对中文词汇/表达「\(trimmed)」进行中译英深度解析，给出最地道准确的英文对应表达：
+
+                ### 1. 🎯 核心英文对应词
+                列出最常用、最地道的 1~3 个英文对应词汇或短语（注明音标、词性与核心区别）。
+
+                ### 2. 🔍 语境与语感辨析
+                说明不同英文表达在语域（如日常口语 vs 商务外企 vs 正式书面 vs 行业术语）中的细微差异与适用场景。
+
+                ### 3. 💬 地道双语例句
+                提供 1~2 个包含上述英文表达的地道现代例句及中文对照。
+                """
+                if let ctx = context, !ctx.trimmingCharacters(in: .whitespaces).isEmpty {
+                    prompt += """
+                    \n### 4. 📌 当前语境推荐
+                    该词出现在语境：「\(ctx)」中，在此语境下最推荐使用的地道英文词汇或表达为：
+                    """
+                }
+                return prompt
+            }
+        }
+
         let wordCount = trimmed.components(separatedBy: .whitespaces).filter { !$0.isEmpty }.count
         let isSentence = wordCount >= 6 || trimmed.contains(". ") || trimmed.contains("? ") || trimmed.contains("! ") ||
                          trimmed.hasSuffix(".") || trimmed.hasSuffix("?") || trimmed.hasSuffix("!")

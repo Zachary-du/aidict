@@ -128,21 +128,23 @@ public final class DictionaryEngine: ObservableObject, @unchecked Sendable {
 
         let enabledSources = orderedEnabledSources
         let isMultiWord = queryWord.contains(" ")
-        let autoRunAI = (triggerSource == .manual) || SettingsStore.shared.aiAutoTriggerOnHover || isMultiWord
+        let isChinese = queryWord.range(of: "\\p{Han}", options: .regularExpression) != nil
+        let autoRunAI = (triggerSource == .manual) || SettingsStore.shared.aiAutoTriggerOnHover || isMultiWord || isChinese
 
         // 初始化各数据源的加载骨架（悬停且未开启自动AI时，AI 源直接呈现为待触发 .idle 状态）
         self.results = enabledSources.map { source in
+            let displayName = (source.id == "ai_engine" && isChinese) ? "AI 中译英解析" : source.name
             if source.id == "ai_engine" && !autoRunAI {
                 return DictionaryResult(
                     sourceId: source.id,
-                    sourceName: source.name,
+                    sourceName: displayName,
                     word: queryWord,
                     status: .idle
                 )
             }
             return DictionaryResult(
                 sourceId: source.id,
-                sourceName: source.name,
+                sourceName: displayName,
                 word: queryWord,
                 status: .loading
             )

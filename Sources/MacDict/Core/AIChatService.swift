@@ -139,13 +139,18 @@ public final class AIChatService: ObservableObject {
         // 构建 System Prompt 强化语言学和词典辅导专长
         var systemPrompt = "你是一位极富耐心、博学且精通多国语言的语言学教授与英语辅导专家。"
         if !currentWord.isEmpty {
-            systemPrompt += " 用户当前正在深入探讨词汇或短语：【\(currentWord)】。"
+            let isChinese = currentWord.range(of: "\\p{Han}", options: .regularExpression) != nil
+            if isChinese {
+                systemPrompt += " 用户当前正在深入探讨中文词汇或短语【\(currentWord)】对应的地道英语翻译、选词辨析与地道表达。"
+            } else {
+                systemPrompt += " 用户当前正在深入探讨词汇或短语：【\(currentWord)】。"
+            }
             if let ctx = contextSentence, !ctx.isEmpty {
                 systemPrompt += " 捕获的实际使用语境为：\"\(ctx)\"。"
             }
         }
         systemPrompt += """
- 用户可能会向你咨询同义词辨析、使用场景、地道造句、搭配用法、易错点、词源故事或任何发散联想。
+ 用户可能会向你咨询中译英地道表达、同义词辨析、使用场景、地道造句、搭配用法、易错点、中式英语避坑或任何发散联想。
 请遵循以下回答准则：
 1. 条理清晰，善用清晰的 Markdown 标头、粗体和列表。
 2. 解释力求简练精准、直击要害，重点说明用法差别和语境语感。

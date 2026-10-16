@@ -781,6 +781,33 @@ function do_default_task() {
         echo "   ✅ VACUUM 完成！释放后 db 大小: $AFTER_SIZE"
     fi
 
+    # 保证 .gitignore 忽略所有私密配置、gemini 指令文件与 token
+    for ign in ".GEMINI.MD" ".gemini.md" "gemini.md" "GEMINI.MD" ".gemini/" "github.token"; do
+        if ! grep -q "^$ign" .gitignore 2>/dev/null; then
+            echo "$ign" >> .gitignore
+        fi
+    done
+    git rm --cached .GEMINI.MD gemini.md 2>/dev/null || true
+
+    python3 - <<'PYEOF'
+path = "Sources/MacDict/App/MacDictApp.swift"
+try:
+    with open(path, "r", encoding="utf-8") as f:
+        c = f.read()
+    if "招聘人员" not in c:
+        target = 'assertTest(mockItem.isAIDefinition == true, "VocabularyItem 正确识别 AI 结构化精炼释义")'
+        replacement = target + """
+\n                let promptChineseWord = aiSource.buildPrompt(word: "招聘人员")
+                assertTest(promptChineseWord.contains("核心英文对应词"), "中文查词精准提示中译英核心英文对应词")
+                assertTest(promptChineseWord.contains("语境与语感辨析"), "中文查词包含语境与语感辨析")"""
+        if target in c:
+            c = c.replace(target, replacement)
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(c)
+except Exception as e:
+    pass
+PYEOF
+
     echo ""
     echo "=========================================================="
     echo "🔨 [2/4] 编译打包最新版 MacDict 并同步至 /Applications..."
@@ -823,9 +850,10 @@ function do_default_task() {
         echo "🚀 正在提交并推送到 GitHub 远程仓库 (Zachary-du/aidict)..."
         echo "=========================================================="
         git branch -M main 2>/dev/null || true
+        git rm --cached .GEMINI.MD gemini.md 2>/dev/null || true
         git add -A
-        git reset *.dmg *.zip 2>/dev/null || true
-        git commit -m "feat: 支持 AI 聊天与初解原生 Markdown 优雅排版渲染" 2>/dev/null || true
+        git reset *.dmg *.zip .GEMINI.MD gemini.md 2>/dev/null || true
+        git commit -m "feat: 支持中文词汇智能中译英解析与地道英文对应表达" 2>/dev/null || true
         if git push -u origin main 2>&1; then
             echo "   ✅ 成功推送至 GitHub 仓库: https://github.com/Zachary-du/aidict"
         else

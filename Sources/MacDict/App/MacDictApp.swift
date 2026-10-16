@@ -287,6 +287,10 @@ struct MacDictApp: App {
                 )
                 assertTest(mockItem.isAIDefinition == true, "VocabularyItem 正确识别 AI 结构化精炼释义")
 
+                let promptChineseWord = aiSource.buildPrompt(word: "招聘人员")
+                assertTest(promptChineseWord.contains("核心英文对应词"), "中文查词精准提示中译英核心英文对应词")
+                assertTest(promptChineseWord.contains("语境与语感辨析"), "中文查词包含语境与语感辨析")
+
                 // 8.1 附加直观图解伴侣卡与智能防超出定位测试
                 print("\n[测试组 8.1] 附加直观图解伴侣卡与智能防超出定位测试 (HUDCompanionPanel)")
                 let parentDummyFrame = NSRect(x: 100, y: 300, width: 460, height: 520)

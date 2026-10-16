@@ -882,26 +882,42 @@ public struct HUDInlineAIChatView: View {
     }
 
     private var inlinePromptChips: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        let isChinese = chatService.currentWord.range(of: "\\p{Han}", options: .regularExpression) != nil
+        return VStack(alignment: .leading, spacing: 6) {
             Text("💡 快捷联想启发:")
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundColor(.secondary)
 
             FlowLayout(spacing: 6) {
-                inlineChip("💡 近义词辨析") {
-                    chatService.sendMessage("请详细列举与【\(chatService.currentWord)】最密切的 3~4 个近义词，并清晰对比语感与适用场景差异。")
-                }
-                inlineChip("📝 地道场景造句") {
-                    chatService.sendMessage("请为【\(chatService.currentWord)】提供 3 个不同场景下的地道例句（如商务沟通、学术论文、日常口语），并附上中文释义。")
-                }
-                inlineChip("🔍 高频固定搭配") {
-                    chatService.sendMessage("请总结【\(chatService.currentWord)】最经典的动词/介词/形容词固定搭配与使用示例。")
-                }
-                inlineChip("⚠️ 易混淆词与陷阱") {
-                    chatService.sendMessage("使用【\(chatService.currentWord)】时有哪些极容易混淆的形近词与常见误区？")
-                }
-                inlineChip("🧠 记忆法与词源") {
-                    chatService.sendMessage("请拆解【\(chatService.currentWord)】的词根词缀，并提供一套生动的联想记忆法。")
+                if isChinese {
+                    inlineChip("🔤 地道英文对应") {
+                        chatService.sendMessage("请详细列举表达【\(chatService.currentWord)】时最常用、最地道的英文词汇与短语，并解析细微语感差别。")
+                    }
+                    inlineChip("🗣️ 口语与书面差异") {
+                        chatService.sendMessage("在日常口语与正式职场/商务英语中，表达【\(chatService.currentWord)】分别有什么不同的地道说法？")
+                    }
+                    inlineChip("📝 场景地道造句") {
+                        chatService.sendMessage("请为【\(chatService.currentWord)】对应的英文表达提供 3 个不同语境下的地道英文例句及中文对照。")
+                    }
+                    inlineChip("⚠️ 中式英语避坑") {
+                        chatService.sendMessage("表达【\(chatService.currentWord)】时，大家最容易陷入哪些中式英语（Chinglish）误区或直译陷阱？")
+                    }
+                } else {
+                    inlineChip("💡 近义词辨析") {
+                        chatService.sendMessage("请详细列举与【\(chatService.currentWord)】最密切的 3~4 个近义词，并清晰对比语感与适用场景差异。")
+                    }
+                    inlineChip("📝 地道场景造句") {
+                        chatService.sendMessage("请为【\(chatService.currentWord)】提供 3 个不同场景下的地道例句（如商务沟通、学术论文、日常口语），并附上中文释义。")
+                    }
+                    inlineChip("🔍 高频固定搭配") {
+                        chatService.sendMessage("请总结【\(chatService.currentWord)】最经典的动词/介词/形容词固定搭配与使用示例。")
+                    }
+                    inlineChip("⚠️ 易混淆词与陷阱") {
+                        chatService.sendMessage("使用【\(chatService.currentWord)】时有哪些极容易混淆的形近词与常见误区？")
+                    }
+                    inlineChip("🧠 记忆法与词源") {
+                        chatService.sendMessage("请拆解【\(chatService.currentWord)】的词根词缀，并提供一套生动的联想记忆法。")
+                    }
                 }
             }
         }
@@ -1018,6 +1034,7 @@ public struct SourceResultCard: View {
                         AIMarkdownView(ai, baseFontSize: 12, textColor: .primary.opacity(0.95))
 
                         if let onFollowUp = onFollowUp {
+                            let isChinese = result.word.range(of: "\\p{Han}", options: .regularExpression) != nil
                             VStack(alignment: .leading, spacing: 4) {
                                 Divider().opacity(0.4)
                                 HStack(spacing: 5) {
@@ -1025,35 +1042,67 @@ public struct SourceResultCard: View {
                                         .font(.system(size: 10, weight: .medium))
                                         .foregroundColor(.secondary)
 
-                                    Button(action: {
-                                        onFollowUp("请详细列举与【\(result.word)】最密切的 3~4 个近义词及语境差异。")
-                                    }) {
-                                        HStack(spacing: 2) {
-                                            Image(systemName: "lightbulb")
-                                            Text("近义辨析")
+                                    if isChinese {
+                                        Button(action: {
+                                            onFollowUp("请详细列举表达【\(result.word)】时最地道的几种英文词汇及语感场景差异。")
+                                        }) {
+                                            HStack(spacing: 2) {
+                                                Image(systemName: "character.book.closed")
+                                                Text("英文辨析")
+                                            }
+                                            .font(.system(size: 10))
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 3)
+                                            .background(Color.primary.opacity(0.06))
+                                            .cornerRadius(5)
                                         }
-                                        .font(.system(size: 10))
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 3)
-                                        .background(Color.primary.opacity(0.06))
-                                        .cornerRadius(5)
-                                    }
-                                    .buttonStyle(.plain)
+                                        .buttonStyle(.plain)
 
-                                    Button(action: {
-                                        onFollowUp("请为【\(result.word)】提供 2 个地道实用的会话例句。")
-                                    }) {
-                                        HStack(spacing: 2) {
-                                            Image(systemName: "pencil.and.outline")
-                                            Text("场景造句")
+                                        Button(action: {
+                                            onFollowUp("请为【\(result.word)】对应的英文表达提供 2 个地道实用的会话例句及中文对照。")
+                                        }) {
+                                            HStack(spacing: 2) {
+                                                Image(systemName: "pencil.and.outline")
+                                                Text("场景造句")
+                                            }
+                                            .font(.system(size: 10))
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 3)
+                                            .background(Color.primary.opacity(0.06))
+                                            .cornerRadius(5)
                                         }
-                                        .font(.system(size: 10))
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 3)
-                                        .background(Color.primary.opacity(0.06))
-                                        .cornerRadius(5)
+                                        .buttonStyle(.plain)
+                                    } else {
+                                        Button(action: {
+                                            onFollowUp("请详细列举与【\(result.word)】最密切的 3~4 个近义词及语境差异。")
+                                        }) {
+                                            HStack(spacing: 2) {
+                                                Image(systemName: "lightbulb")
+                                                Text("近义辨析")
+                                            }
+                                            .font(.system(size: 10))
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 3)
+                                            .background(Color.primary.opacity(0.06))
+                                            .cornerRadius(5)
+                                        }
+                                        .buttonStyle(.plain)
+
+                                        Button(action: {
+                                            onFollowUp("请为【\(result.word)】提供 2 个地道实用的会话例句。")
+                                        }) {
+                                            HStack(spacing: 2) {
+                                                Image(systemName: "pencil.and.outline")
+                                                Text("场景造句")
+                                            }
+                                            .font(.system(size: 10))
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 3)
+                                            .background(Color.primary.opacity(0.06))
+                                            .cornerRadius(5)
+                                        }
+                                        .buttonStyle(.plain)
                                     }
-                                    .buttonStyle(.plain)
 
                                     Spacer()
 
