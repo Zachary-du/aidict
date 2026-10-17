@@ -39,18 +39,26 @@ public struct MainWindowView: View {
 
     private var usAudioURL: String? {
         let cleanQuery = currentWord.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        if let exact = engine.results.first(where: { $0.word.lowercased() == cleanQuery && $0.audioURL != nil })?.audioURL {
+        let isUSAudio: (String) -> Bool = { url in
+            let l = url.lowercased()
+            return !l.contains("en_gb") && !l.contains("breprons") && !l.contains("-uk.")
+        }
+        if let exact = engine.results.first(where: { $0.word.lowercased() == cleanQuery && $0.audioURL != nil && isUSAudio($0.audioURL!) })?.audioURL {
             return exact
         }
-        return engine.results.compactMap { $0.audioURL }.first(where: { $0.lowercased().contains(cleanQuery) })
+        return engine.results.compactMap { $0.audioURL }.first(where: { $0.lowercased().contains(cleanQuery) && isUSAudio($0) })
     }
 
     private var ukAudioURL: String? {
         let cleanQuery = currentWord.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        if let exact = engine.results.first(where: { $0.word.lowercased() == cleanQuery && $0.audioURL_uk != nil })?.audioURL_uk {
+        let isUKAudio: (String) -> Bool = { url in
+            let l = url.lowercased()
+            return !l.contains("en_us") && !l.contains("ameprons") && !l.contains("-us.")
+        }
+        if let exact = engine.results.first(where: { $0.word.lowercased() == cleanQuery && $0.audioURL_uk != nil && isUKAudio($0.audioURL_uk!) })?.audioURL_uk {
             return exact
         }
-        return engine.results.compactMap { $0.audioURL_uk }.first(where: { $0.lowercased().contains(cleanQuery) })
+        return engine.results.compactMap { $0.audioURL_uk }.first(where: { $0.lowercased().contains(cleanQuery) && isUKAudio($0) })
     }
 
     private var formattedPhonetic: String? {

@@ -27,13 +27,18 @@ public final class AudioPlayer: NSObject, @unchecked Sendable {
         let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanText.isEmpty else { return }
 
-        // 1. 根据口音偏好选择词典原始音频，并严格防御例句音频泄露
-        let candidateURL: String? = (accent == "uk") ? (audioURL_uk ?? audioURL) : (audioURL ?? audioURL_uk)
-        if let urlStr = candidateURL, !urlStr.isEmpty,
-           !urlStr.contains("exaProns"), !urlStr.contains("exa_sounds"),
-           let url = URL(string: urlStr) {
-            playAudioURL(url)
-            return
+        // 1. 严格按所选口音匹配词典原厂原声录音（严禁英美跨口音混用，严防例句音频泄露）
+        let rawURL: String? = (accent == "uk") ? audioURL_uk : audioURL
+        if let urlStr = rawURL, !urlStr.isEmpty,
+           !urlStr.contains("exaProns"), !urlStr.contains("exa_sounds") {
+            let lower = urlStr.lowercased()
+            // 严格防错：如果请求美音但拿到的是英音链接，或请求英音拿到的是美音链接，坚决不播放该错配文件，直接进入高质量 AI/真人库
+            let isMismatched = (accent == "us" && (lower.contains("en_gb") || lower.contains("breprons") || lower.contains("-uk."))) ||
+                               (accent == "uk" && (lower.contains("en_us") || lower.contains("ameprons") || lower.contains("-us.")))
+            if !isMismatched, let url = URL(string: urlStr) {
+                playAudioURL(url)
+                return
+            }
         }
 
         // 2. 无词典词头原声时，检查用户是否强制系统原生 TTS

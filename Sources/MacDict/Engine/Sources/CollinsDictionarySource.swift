@@ -77,8 +77,6 @@ public final class CollinsDictionarySource: DictionarySource, @unchecked Sendabl
                 if usAudio == nil { usAudio = clean }
             }
         }
-        if usAudio == nil { usAudio = ukAudio }
-        if ukAudio == nil { ukAudio = usAudio }
 
         // 4. 词频与标签 (例如 COBUILD 频次 band 3 -> ●●●)
         var tags: [String] = []
