@@ -20,6 +20,8 @@ public final class SettingsStore: ObservableObject, @unchecked Sendable {
     @AppStorage("ai_auto_trigger_on_hover")  public var aiAutoTriggerOnHover: Bool = false    { willSet { objectWillChange.send() } }
     /// 是否在悬浮窗旁延迟展示概念图解与直观理解伴侣卡
     @AppStorage("show_intuitive_companion")  public var showIntuitiveCompanion: Bool = true   { willSet { objectWillChange.send() } }
+    /// 是否在启动时自动检查新版本
+    @AppStorage("auto_check_updates")        public var autoCheckUpdates: Bool = true          { willSet { objectWillChange.send() } }
 
     // MARK: - 发音与 AI 神经语音 (Neural TTS)
     /// 语音引擎偏好: "neural" = AI 神经拟真发音 (超自然免配置), "openai" = OpenAI TTS, "system" = macOS系统语音
@@ -46,15 +48,59 @@ public final class SettingsStore: ObservableObject, @unchecked Sendable {
         get { ud.string(forKey: "ai_model") ?? "" }
         set { ud.set(newValue, forKey: "ai_model"); objectWillChange.send() }
     }
-    /// 自定义 AI 系统提示词（留空使用默认）
+    /// 官方默认系统提示词（纯文本自然排版，不含任何 Markdown 语法符号）
+    public static let defaultSystemPrompt = "你是一位极富经验、博学且精通多国语言的语言学专家。请直接以清晰自然、分段工整的纯文本输出词汇解析与地道例句，严禁输出任何 Markdown 格式符号（如 #、*、** 等标记），让内容像纸质权威词典一样干净优雅、一目了然。"
+
+    /// 官方默认用户提示词模板（中英自适应，支持 {word} 和 {context} 占位符）
+    public static let defaultUserPromptTemplate = """
+请对「{word}」进行专业深度解析：
+
+若输入为中文：
+【1. 核心英文对应词】列出最常用、最地道的 1~3 个英文对应词汇或短语（注明音标、词性与核心区别）。
+【2. 语境与语感辨析】说明不同英文表达在日常口语与正式职场/商务语境中的细微差异与适用场景。
+【3. 地道双语例句】提供 1~2 个包含上述英文表达的地道现代例句及中文对照。
+
+若输入为英文：
+1. 词性与音标
+2. 核心中文释义（2~3条）
+3. 最地道的现代例句（1~2条）及中文对照。
+若附带语境「{context}」，指出其在【语境】该词出现在以下句子中的确切含义与地道翻译。
+
+请直接输出工整纯文本，不要使用任何 Markdown 标记符号。
+"""
+
+    /// 自定义 AI 系统提示词（若未自定义则展示并返回官方默认提示词）
     public var aiSystemPrompt: String {
-        get { ud.string(forKey: "ai_system_prompt") ?? "" }
+        get {
+            let val = ud.string(forKey: "ai_system_prompt") ?? ""
+            if val.isEmpty || val.contains("回复控制在200字以内") {
+                return Self.defaultSystemPrompt
+            }
+            return val
+        }
         set { ud.set(newValue, forKey: "ai_system_prompt"); objectWillChange.send() }
     }
-    /// 自定义用户提示词模板，支持 {word} 和 {context} 占位符（留空使用默认）
+
+    /// 自定义用户提示词模板（若未自定义则展示并返回官方默认模板）
     public var aiUserPromptTemplate: String {
-        get { ud.string(forKey: "ai_user_prompt_template") ?? "" }
+        get {
+            let val = ud.string(forKey: "ai_user_prompt_template") ?? ""
+            if val.isEmpty || val.contains("【中译英】：若输入为中文") {
+                return Self.defaultUserPromptTemplate
+            }
+            return val
+        }
         set { ud.set(newValue, forKey: "ai_user_prompt_template"); objectWillChange.send() }
+    }
+
+    /// 重置系统提示词为官方默认
+    public func resetSystemPrompt() {
+        aiSystemPrompt = Self.defaultSystemPrompt
+    }
+
+    /// 重置用户提示词模板为官方默认
+    public func resetUserPrompt() {
+        aiUserPromptTemplate = Self.defaultUserPromptTemplate
     }
     public var merriamWebsterAPIKey: String {
         get { ud.string(forKey: "mw_api_key") ?? "" }

@@ -100,9 +100,9 @@ function do_build() {
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
+    <string>1.1.0</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>110</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>LSUIElement</key>
@@ -766,11 +766,9 @@ function do_default_task() {
     check_github_env
 
     echo "=========================================================="
-    echo "🧹 [1/4] 执行 SQLite VACUUM 并清理旧版系统提示词缓存..."
+    echo "🧹 [1/4] 执行 SQLite VACUUM 并检查系统配置..."
     echo "=========================================================="
-    defaults delete "${BUNDLE_ID}" ai_system_prompt 2>/dev/null || true
-    defaults delete "${BUNDLE_ID}" ai_user_prompt_template 2>/dev/null || true
-    echo "   ✅ 已清除旧版提示词缓存，确保恢复为精炼简洁翻译模式"
+    echo "   ✅ 保留用户自定义提示词与语境配置"
 
     DB_FILE="$HOME/Library/Application Support/MacDict/dictionaries.db"
     if [ -f "$DB_FILE" ]; then
@@ -853,7 +851,7 @@ PYEOF
         git rm --cached .GEMINI.MD gemini.md 2>/dev/null || true
         git add -A
         git reset *.dmg *.zip .GEMINI.MD gemini.md 2>/dev/null || true
-        git commit -m "feat: 支持中文词汇智能中译英解析与地道英文对应表达" 2>/dev/null || true
+        git commit -m "feat: 支持自定义默认提示词展示、纯文本排版、版本显示与自动更新" 2>/dev/null || true
         if git push -u origin main 2>&1; then
             echo "   ✅ 成功推送至 GitHub 仓库: https://github.com/Zachary-du/aidict"
         else

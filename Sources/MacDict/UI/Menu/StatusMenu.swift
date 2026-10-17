@@ -76,8 +76,8 @@ public final class StatusMenuController: NSObject {
     public func buildMenu() -> NSMenu {
         let menu = NSMenu()
 
-        // 标题
-        let titleItem = NSMenuItem(title: "MacDict 词典", action: nil, keyEquivalent: "")
+        // 标题与版本展示
+        let titleItem = NSMenuItem(title: "MacDict 词典 v\(UpdateManager.currentVersion)", action: nil, keyEquivalent: "")
         titleItem.isEnabled = false
         menu.addItem(titleItem)
         menu.addItem(NSMenuItem.separator())
@@ -150,12 +150,28 @@ public final class StatusMenuController: NSObject {
 
         menu.addItem(NSMenuItem.separator())
 
+        // 检查更新
+        let updateItem = NSMenuItem(
+            title: UpdateManager.shared.hasNewVersion ? "🎉 发现新版本 v\(UpdateManager.shared.latestVersion)..." : "检查更新...",
+            action: #selector(checkForUpdatesAction),
+            keyEquivalent: "u"
+        )
+        updateItem.target = self
+        menu.addItem(updateItem)
+
         // 退出
         let quitItem = NSMenuItem(title: "退出 MacDict", action: #selector(quitAction), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
 
         return menu
+    }
+
+    @objc private func checkForUpdatesAction() {
+        openSettingsAction()
+        Task {
+            await UpdateManager.shared.checkForUpdates(silent: false)
+        }
     }
 
     @objc private func toggleHoverAction() {

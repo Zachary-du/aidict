@@ -26,9 +26,15 @@ public struct SettingsWindowView: View {
                     Label("AI 语境配置", systemImage: "sparkles")
                 }
                 .tag(2)
+
+            AboutUpdateSettingsView(settings: settings)
+                .tabItem {
+                    Label("关于与更新", systemImage: "info.circle")
+                }
+                .tag(3)
         }
         .padding(20)
-        .frame(width: 560, height: 680)
+        .frame(width: 580, height: 700)
         .onAppear {
             checkPermissions()
         }
@@ -580,42 +586,47 @@ struct AISettingsView: View {
                     .textFieldStyle(.roundedBorder)
             }
 
-            Section(header: Text("自定义系统提示词").font(.headline)) {
-                Text("设置 AI 的角色与回复风格。留空使用默认。")
+            Section(header: Text("AI 系统提示词 (System Prompt)").font(.headline)) {
+                Text("定义 AI 的角色定位与排版风格。默认配置为工整纯文本自然排版，不输出任何 Markdown 格式标记。可直接在下方自由修改：")
                     .font(.caption).foregroundColor(.secondary)
 
                 TextEditor(text: $settings.aiSystemPrompt)
                     .font(.system(size: 11, design: .monospaced))
-                    .frame(minHeight: 80, maxHeight: 110)
+                    .frame(minHeight: 85, maxHeight: 120)
                     .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.secondary.opacity(0.3), lineWidth: 1))
 
                 HStack {
-                    Text("默认: \(defaultSystemPrompt)")
+                    Text("💡 提示：修改后自动保存生效；如需还原可随时重置。")
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
-                        .lineLimit(2)
                     Spacer()
-                    Button("重置") { settings.aiSystemPrompt = "" }
-                        .font(.caption)
+                    Button("恢复默认系统提示词") {
+                        settings.resetSystemPrompt()
+                    }
+                    .font(.caption)
+                    .buttonStyle(.bordered)
                 }
             }
 
-            Section(header: Text("自定义用户提示词模板").font(.headline)) {
-                Text(defaultUserPromptHint)
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundColor(.secondary)
+            Section(header: Text("AI 用户查词提示词模板 (User Prompt)").font(.headline)) {
+                Text("中英查词时发送给 AI 的指令模板，支持 {word}（查询词）与 {context}（语境句子）占位符。已预置中英双向解析逻辑，可随时修改：")
+                    .font(.caption).foregroundColor(.secondary)
 
                 TextEditor(text: $settings.aiUserPromptTemplate)
                     .font(.system(size: 11, design: .monospaced))
-                    .frame(minHeight: 90, maxHeight: 130)
+                    .frame(minHeight: 120, maxHeight: 160)
                     .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.secondary.opacity(0.3), lineWidth: 1))
 
                 HStack {
-                    Text("留空使用内置提示词")
-                        .font(.system(size: 10)).foregroundColor(.secondary)
+                    Text("💡 提示：输入词汇会自动替换 {word}；划词语境会自动注入 {context}。")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
                     Spacer()
-                    Button("重置") { settings.aiUserPromptTemplate = "" }
-                        .font(.caption)
+                    Button("恢复默认模板") {
+                        settings.resetUserPrompt()
+                    }
+                    .font(.caption)
+                    .buttonStyle(.bordered)
                 }
             }
 
@@ -631,5 +642,183 @@ struct AISettingsView: View {
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+// MARK: - 关于与自动更新设置
+struct AboutUpdateSettingsView: View {
+    @ObservedObject var settings: SettingsStore
+    @ObservedObject var updateManager = UpdateManager.shared
+
+    var body: some View {
+        VStack(spacing: 16) {
+            // 应用基本信息展示
+            VStack(spacing: 8) {
+                if let icon = NSImage(named: "AppIcon") {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .frame(width: 64, height: 64)
+                        .cornerRadius(14)
+                        .shadow(color: .black.opacity(0.12), radius: 4, x: 0, y: 2)
+                } else {
+                    Image(systemName: "character.book.closed.fill")
+                        .font(.system(size: 48))
+                        .foregroundColor(.accentColor)
+                }
+
+                Text("MacDict 词典")
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+
+                HStack(spacing: 8) {
+                    Text("版本 v\(UpdateManager.currentVersion) (Build \(UpdateManager.buildNumber))")
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                        .foregroundColor(.secondary)
+
+                    Text("Apple Silicon 原生")
+                        .font(.system(size: 10, weight: .semibold))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.accentColor.opacity(0.12))
+                        .foregroundColor(.accentColor)
+                        .cornerRadius(4)
+                }
+
+                Text("原生轻量、极速常驻的 macOS 划词/查词与 AI 助理工具")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.top, 10)
+
+            Divider()
+
+            // 自动更新配置与检查卡片
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("软件更新")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text(updateManager.statusMessage)
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    Button(action: {
+                        Task {
+                            await updateManager.checkForUpdates(silent: false)
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            if updateManager.isChecking {
+                                ProgressView()
+                                    .scaleEffect(0.6)
+                                    .frame(width: 14, height: 14)
+                            } else {
+                                Image(systemName: "arrow.clockwise")
+                                    .font(.system(size: 11))
+                            }
+                            Text(updateManager.isChecking ? "检查中..." : "检查更新")
+                                .font(.system(size: 12))
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(updateManager.isChecking)
+                }
+
+                Toggle("启动应用时自动检查最新版本", isOn: $settings.autoCheckUpdates)
+                    .font(.system(size: 12))
+
+                // 若发现新版本，展示更新亮点与一键升级卡片
+                if updateManager.hasNewVersion {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: "sparkles")
+                                .foregroundColor(.orange)
+                            Text("发现新版本 v\(updateManager.latestVersion)")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(.primary)
+                            Spacer()
+                        }
+
+                        if !updateManager.releaseNotes.isEmpty {
+                            ScrollView {
+                                Text(updateManager.releaseNotes)
+                                    .font(.system(size: 11, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(6)
+                            }
+                            .frame(maxHeight: 100)
+                            .background(Color.primary.opacity(0.03))
+                            .cornerRadius(6)
+                        }
+
+                        HStack(spacing: 10) {
+                            Button(action: {
+                                updateManager.downloadLatestDMG()
+                            }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "arrow.down.circle.fill")
+                                    Text(updateManager.isDownloading ? "正在下载安装包..." : "一键下载并打开安装包 (DMG)")
+                                }
+                                .font(.system(size: 11, weight: .semibold))
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(updateManager.isDownloading)
+
+                            if let pageURL = updateManager.releasePageURL {
+                                Button(action: {
+                                    NSWorkspace.shared.open(pageURL)
+                                }) {
+                                    HStack(spacing: 3) {
+                                        Image(systemName: "safari")
+                                        Text("前往 GitHub 查看")
+                                    }
+                                    .font(.system(size: 11))
+                                }
+                                .buttonStyle(.bordered)
+                            }
+                        }
+                    }
+                    .padding(10)
+                    .background(Color.orange.opacity(0.08))
+                    .cornerRadius(8)
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.orange.opacity(0.3), lineWidth: 1))
+                }
+            }
+            .padding(12)
+            .background(Color(NSColor.controlBackgroundColor))
+            .cornerRadius(10)
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15), lineWidth: 1))
+
+            // 开源与许可信息
+            HStack {
+                Button(action: {
+                    if let url = URL(string: UpdateManager.repoURL) {
+                        NSWorkspace.shared.open(url)
+                    }
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left.forwardslash.chevron.right")
+                        Text("GitHub 开源仓库 (Zachary-du/aidict)")
+                    }
+                    .font(.system(size: 11))
+                    .foregroundColor(.accentColor)
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                Text("MIT License · 免费开源")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary.opacity(0.7))
+            }
+            .padding(.horizontal, 4)
+
+            Spacer()
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

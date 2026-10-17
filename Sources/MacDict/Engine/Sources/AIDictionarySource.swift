@@ -38,8 +38,7 @@ public final class AIDictionarySource: DictionarySource, @unchecked Sendable {
 
         // 构建提示词（支持用户自定义）
         let prompt = buildPrompt(word: word, context: context)
-        let defaultSystemPrompt = "你是一位精通英语的语言学专家。请用简洁清晰的中文解析词汇，重点突出语境含义，避免冗长废话。回复控制在200字以内。"
-        let systemPrompt = s.aiSystemPrompt.isEmpty ? defaultSystemPrompt : s.aiSystemPrompt
+        let systemPrompt = s.aiSystemPrompt.isEmpty ? SettingsStore.defaultSystemPrompt : s.aiSystemPrompt
 
         let requestBody: [String: Any] = [
             "model": model,
@@ -116,34 +115,37 @@ public final class AIDictionarySource: DictionarySource, @unchecked Sendable {
                 请将以下中文句子翻译为地道、自然的现代英语，并进行专业解析：
                 「\(trimmed)」
 
-                ### 1. 🌟 地道英文翻译
+                【1. 地道英文翻译】
                 提供最自然地道的英文表达（可附口语与书面语不同译法）。
 
-                ### 2. 🔑 核心词汇与短语提炼
+                【2. 核心词汇与短语提炼】
                 提炼句中对应的 2~3 个核心高阶英文词汇/短语，附音标、词性及简明释义。
 
-                ### 3. 💡 句型与中英思维差异
+                【3. 句型与思维差异】
                 简析该句的核心语法句型或中英表达思维差异。
+
+                请直接输出工整自然的纯文本，不要使用任何 Markdown 标记。
                 """
             } else {
                 var prompt = """
                 请对中文词汇/表达「\(trimmed)」进行中译英深度解析，给出最地道准确的英文对应表达：
 
-                ### 1. 🎯 核心英文对应词
+                【1. 核心英文对应词】
                 列出最常用、最地道的 1~3 个英文对应词汇或短语（注明音标、词性与核心区别）。
 
-                ### 2. 🔍 语境与语感辨析
-                说明不同英文表达在语域（如日常口语 vs 商务外企 vs 正式书面 vs 行业术语）中的细微差异与适用场景。
+                【2. 语境与语感辨析】
+                说明不同英文表达在日常口语与正式职场/商务语境中的细微差异与适用场景。
 
-                ### 3. 💬 地道双语例句
+                【3. 地道双语例句】
                 提供 1~2 个包含上述英文表达的地道现代例句及中文对照。
                 """
                 if let ctx = context, !ctx.trimmingCharacters(in: .whitespaces).isEmpty {
                     prompt += """
-                    \n### 4. 📌 当前语境推荐
-                    该词出现在语境：「\(ctx)」中，在此语境下最推荐使用的地道英文词汇或表达为：
+                    \n【4. 当前语境推荐】
+                    该词出现在语境：「\(ctx)」中，推荐此处最契合地道的英文表达为：
                     """
                 }
+                prompt += "\n\n请直接输出工整自然的纯文本，不要使用任何 Markdown 标记（如 ###、*、** 等符号）。"
                 return prompt
             }
         }
@@ -157,20 +159,22 @@ public final class AIDictionarySource: DictionarySource, @unchecked Sendable {
             请对以下英文句子进行专业解析：
             「\(trimmed)」
 
-            1. 地道中文翻译
-            2. 重点词汇/短语提炼（附简要释义与音标）
-            3. 核心句型或语法要点简析（简洁明了）
+            【1. 地道中文翻译】
+            【2. 重点词汇与短语提炼】（附简要释义与音标）
+            【3. 核心句型或语法要点简析】
+            请直接以工整纯文本输出，不要使用任何 Markdown 标记。
             """
         } else if wordCount >= 2 {
             return """
             请对英文短语/习惯表达「\(trimmed)」进行专业解析：
-            1. 核心中文含义与常见搭配
-            2. 地道例句（带中文对照）
-            3. 易混淆表达或使用建议
+            【1. 核心中文含义与常见搭配】
+            【2. 地道例句】（带中文对照）
+            【3. 易混淆表达或使用建议】
+            请直接以工整纯文本输出，不要使用任何 Markdown 标记。
             """
         }
 
-        // 默认单单词提示词：精炼、清晰、简明
+        // 默认英文单单词提示词：精炼、清晰、简明
         var prompt = """
         请对「\(word)」进行精炼解析：
         1. 词性与音标
@@ -185,6 +189,7 @@ public final class AIDictionarySource: DictionarySource, @unchecked Sendable {
         } else {
             prompt += "\n3. 最地道的现代例句（1~2条）及中文对照。"
         }
+        prompt += "\n请直接输出工整纯文本，不要使用任何 Markdown 标记符号。"
         return prompt
     }
 }

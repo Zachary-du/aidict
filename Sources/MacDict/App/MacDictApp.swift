@@ -323,6 +323,15 @@ struct MacDictApp: App {
                 HUDCompanionViewModel.shared.reset(for: "width")
                 assertTest(HUDCompanionViewModel.shared.conceptText?.contains("跨度") == true, "伴侣卡重置初始化时 0 毫秒即时绑定脑海意象文字")
 
+                // 9. 版本号与自动更新服务自检 (UpdateManager & SettingsStore)
+                print("\n[测试组 9] 版本号与自动更新服务自检 (UpdateManager & SettingsStore)")
+                assertTest(UpdateManager.currentVersion == "1.1.0", "应用主版本号正确标注为 1.1.0")
+                assertTest(UpdateManager.buildNumber == "110", "构建版本号为 110")
+                assertTest(!SettingsStore.defaultSystemPrompt.isEmpty, "默认系统提示词模板不为空且已内置")
+                assertTest(!SettingsStore.defaultUserPromptTemplate.isEmpty, "默认用户提示词模板不为空且已内置")
+                assertTest(SettingsStore.shared.aiSystemPrompt.contains("语言学专家"), "SettingsStore 返回有效系统提示词")
+                assertTest(SettingsStore.shared.aiUserPromptTemplate.contains("{word}"), "SettingsStore 默认提示词包含 {word} 占位符")
+
                 print("\n==========================================================")
                 print("📊 自检总结: 通过 \(passCount) 项, 失败 \(failCount) 项")
                 print("==========================================================")
