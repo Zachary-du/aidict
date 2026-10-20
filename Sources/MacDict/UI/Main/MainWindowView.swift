@@ -106,8 +106,12 @@ public struct MainWindowView: View {
                     .textFieldStyle(.plain)
                     .font(.system(size: 13))
                     .onSubmit {
-                        if !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            navigateTo(word: searchText)
+                        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !query.isEmpty else { return }
+                        if query.lowercased() == currentWord.lowercased() {
+                            DictionaryEngine.shared.lookup(word: query, triggerSource: .manual)
+                        } else {
+                            navigateTo(word: query)
                         }
                     }
                     .onChange(of: searchText) { newValue in
@@ -148,12 +152,27 @@ public struct MainWindowView: View {
                     .padding(.vertical, 6)
 
                     if searchSuggestions.isEmpty {
-                        VStack(spacing: 8) {
-                            Text("按回车直接查询「\(searchText)」")
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
+                        Button(action: {
+                            let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+                            guard !query.isEmpty else { return }
+                            if query.lowercased() == currentWord.lowercased() {
+                                DictionaryEngine.shared.lookup(word: query, triggerSource: .manual)
+                            } else {
+                                navigateTo(word: query)
+                            }
+                        }) {
+                            VStack(spacing: 8) {
+                                Image(systemName: "return")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.accentColor.opacity(0.8))
+                                Text("按回车直接查询「\(searchText)」")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.secondary)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .contentShape(Rectangle())
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .buttonStyle(.plain)
                     } else {
                         List(searchSuggestions, id: \.self) { word in
                             HStack {
@@ -351,89 +370,112 @@ public struct MainWindowView: View {
             if currentWord.isEmpty {
                 welcomeEmptyView
             } else {
-                ScrollView(.vertical, showsIndicators: true) {
-                    VStack(alignment: .leading, spacing: 16) {
-                        // 单词大标题 + 音标 + 标签
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(currentWord)
-                                .font(.system(size: 32, weight: .bold, design: .rounded))
-                                .foregroundColor(.primary)
+                ScrollViewReader { proxy in
+                    ScrollView(.vertical, showsIndicators: true) {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Color.clear
+                                .frame(height: 0)
+                                .id("MAIN_DETAIL_TOP")
 
-                            HStack(spacing: 12) {
-                                // 英音
-                                if let ukPh = ukPhonetic ?? formattedPhonetic {
-                                    Button(action: {
-                                        AudioPlayer.shared.speak(text: currentWord, audioURL: usAudioURL, audioURL_uk: ukAudioURL, accent: "uk")
-                                    }) {
-                                        HStack(spacing: 4) {
-                                            Text("英").font(.system(size: 11, weight: .bold))
-                                            Text(ukPh).font(.system(size: 12, design: .serif))
-                                            Image(systemName: "speaker.wave.2.fill").font(.system(size: 9))
+                            // 单词大标题 + 音标 + 标签
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(currentWord)
+                                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                                    .foregroundColor(.primary)
+
+                                HStack(spacing: 12) {
+                                    // 英音
+                                    if let ukPh = ukPhonetic ?? formattedPhonetic {
+                                        Button(action: {
+                                            AudioPlayer.shared.speak(text: currentWord, audioURL: usAudioURL, audioURL_uk: ukAudioURL, accent: "uk")
+                                        }) {
+                                            HStack(spacing: 4) {
+                                                Text("英").font(.system(size: 11, weight: .bold))
+                                                Text(ukPh).font(.system(size: 12, design: .serif))
+                                                Image(systemName: "speaker.wave.2.fill").font(.system(size: 9))
+                                            }
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(Color.primary.opacity(0.06))
+                                            .cornerRadius(6)
+                                            .foregroundColor(.primary)
                                         }
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .background(Color.primary.opacity(0.06))
-                                        .cornerRadius(6)
-                                        .foregroundColor(.primary)
+                                        .buttonStyle(.plain)
                                     }
-                                    .buttonStyle(.plain)
-                                }
 
-                                // 美音
-                                if let usPh = usPhonetic ?? formattedPhonetic {
-                                    Button(action: {
-                                        AudioPlayer.shared.speak(text: currentWord, audioURL: usAudioURL, audioURL_uk: ukAudioURL, accent: "us")
-                                    }) {
-                                        HStack(spacing: 4) {
-                                            Text("美").font(.system(size: 11, weight: .bold))
-                                            Text(usPh).font(.system(size: 12, design: .serif))
-                                            Image(systemName: "speaker.wave.2.fill").font(.system(size: 9))
+                                    // 美音
+                                    if let usPh = usPhonetic ?? formattedPhonetic {
+                                        Button(action: {
+                                            AudioPlayer.shared.speak(text: currentWord, audioURL: usAudioURL, audioURL_uk: ukAudioURL, accent: "us")
+                                        }) {
+                                            HStack(spacing: 4) {
+                                                Text("美").font(.system(size: 11, weight: .bold))
+                                                Text(usPh).font(.system(size: 12, design: .serif))
+                                                Image(systemName: "speaker.wave.2.fill").font(.system(size: 9))
+                                            }
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(Color.primary.opacity(0.06))
+                                            .cornerRadius(6)
+                                            .foregroundColor(.primary)
                                         }
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .background(Color.primary.opacity(0.06))
-                                        .cornerRadius(6)
-                                        .foregroundColor(.primary)
+                                        .buttonStyle(.plain)
                                     }
-                                    .buttonStyle(.plain)
-                                }
 
-                                if lookupCount > 1 {
-                                    Text("第 \(lookupCount) 次查询")
-                                        .font(.system(size: 10, weight: .semibold))
-                                        .foregroundColor(.accentColor)
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 3)
-                                        .background(Color.accentColor.opacity(0.12))
-                                        .cornerRadius(4)
+                                    if lookupCount > 1 {
+                                        Text("第 \(lookupCount) 次查询")
+                                            .font(.system(size: 10, weight: .semibold))
+                                            .foregroundColor(.accentColor)
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 3)
+                                            .background(Color.accentColor.opacity(0.12))
+                                            .cornerRadius(4)
+                                    }
                                 }
                             }
+                            .padding(.horizontal, 24)
+                            .padding(.top, 16)
+
+                            Divider().padding(.horizontal, 24)
+
+                            // 各词典结果卡片流
+                            LazyVStack(spacing: 16) {
+                                ForEach(engine.results) { result in
+                                    MainSourceResultCard(result: result)
+                                }
+
+                                if engine.results.isEmpty {
+                                    if engine.isSearching {
+                                        VStack(spacing: 12) {
+                                            ProgressView()
+                                                .scaleEffect(1.1)
+                                            Text("正在查询多本权威词典与 AI 释义...")
+                                                .font(.system(size: 13))
+                                                .foregroundColor(.secondary)
+                                        }
+                                        .frame(maxWidth: .infinity, minHeight: 180)
+                                    } else {
+                                        VStack(spacing: 8) {
+                                            Image(systemName: "text.magnifyingglass")
+                                                .font(.system(size: 36))
+                                                .foregroundColor(.secondary)
+                                            Text("未查询到释义")
+                                                .font(.system(size: 14))
+                                                .foregroundColor(.secondary)
+                                        }
+                                        .frame(maxWidth: .infinity, minHeight: 180)
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 24)
+                            .padding(.bottom, 32)
                         }
-                        .padding(.horizontal, 24)
-                        .padding(.top, 16)
-
-                        Divider().padding(.horizontal, 24)
-
-                        // 各词典结果卡片流
-                        LazyVStack(spacing: 16) {
-                            ForEach(engine.results) { result in
-                                MainSourceResultCard(result: result)
-                            }
-
-                            if engine.results.isEmpty && !engine.isSearching {
-                                VStack(spacing: 8) {
-                                    Image(systemName: "text.magnifyingglass")
-                                        .font(.system(size: 36))
-                                        .foregroundColor(.secondary)
-                                    Text("未查询到释义")
-                                        .font(.system(size: 14))
-                                        .foregroundColor(.secondary)
-                                }
-                                .frame(maxWidth: .infinity, minHeight: 180)
-                            }
-                        }
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 32)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                    }
+                    .id(currentWord)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .onChange(of: currentWord) { _ in
+                        proxy.scrollTo("MAIN_DETAIL_TOP", anchor: .top)
                     }
                 }
             }
@@ -488,8 +530,9 @@ public struct MainWindowView: View {
         let clean = word.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !clean.isEmpty else { return }
 
-        // 如果等于当前词条且已查过，直接跳过
+        // 如果等于当前词条，再次强制触发查询，防止结果未刷新
         if currentIndex >= 0 && currentIndex < navigationStack.count && navigationStack[currentIndex].lowercased() == clean.lowercased() {
+            DictionaryEngine.shared.lookup(word: clean, triggerSource: .manual)
             return
         }
 

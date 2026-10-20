@@ -46,9 +46,10 @@ public final class WordImageService: ObservableObject, @unchecked Sendable {
             return
         }
 
-        // 整句或超长文本无需匹配单个单词插画
+        // 整句或超长文本无需匹配单个单词插画，中文查询亦不检索英文插画库
+        let isChinese = trimmed.range(of: "\\p{Han}", options: .regularExpression) != nil
         let wordCount = trimmed.components(separatedBy: .whitespaces).filter { !$0.isEmpty }.count
-        if wordCount >= 5 {
+        if wordCount >= 5 || isChinese {
             Task { @MainActor in
                 self.currentImage = nil
                 self.currentImageURL = nil
@@ -136,6 +137,11 @@ public final class WordImageService: ObservableObject, @unchecked Sendable {
     public func fetchImageAsync(for word: String) async -> (image: NSImage?, url: String?) {
         let sanitized = word.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !sanitized.isEmpty else { return (nil, nil) }
+
+        // 中文词汇不查询英文插画库，直接返回
+        if sanitized.range(of: "\\p{Han}", options: .regularExpression) != nil {
+            return (nil, nil)
+        }
 
         // 去重并发请求
         if !tryBeginInFlight(word: sanitized) {

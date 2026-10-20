@@ -15,6 +15,10 @@ public struct AIMentalModelCardView: View {
         self.onFollowUp = onFollowUp
     }
 
+    private var isChineseWord: Bool {
+        word.range(of: "\\p{Han}", options: .regularExpression) != nil
+    }
+
     private var activeImage: NSImage? {
         let cleanWord = word.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         if imageService.currentWord == cleanWord, let img = imageService.currentImage {
@@ -66,7 +70,7 @@ public struct AIMentalModelCardView: View {
                 .padding(8)
                 .background(Color.purple.opacity(0.04))
                 .cornerRadius(10)
-            } else if imageService.isLoading && !word.contains(" ") {
+            } else if imageService.isLoading && !word.contains(" ") && !isChineseWord {
                 HStack(spacing: 6) {
                     ProgressView().scaleEffect(0.6).frame(width: 14, height: 14)
                     Text("正在检索匹配的矢量概念图解...")
@@ -79,10 +83,10 @@ public struct AIMentalModelCardView: View {
                 .cornerRadius(8)
             } else if !word.contains(" ") {
                 HStack(spacing: 6) {
-                    Image(systemName: "brain.head.profile")
+                    Image(systemName: isChineseWord ? "sparkles" : "brain.head.profile")
                         .font(.system(size: 11))
                         .foregroundColor(.purple)
-                    Text("认知语言学心智模型 · 空间隐喻")
+                    Text(isChineseWord ? "AI 中译英 · 地道表达与语境辨析" : "认知语言学心智模型 · 空间隐喻")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundColor(.purple)
                     Spacer()
@@ -110,11 +114,14 @@ public struct AIMentalModelCardView: View {
                             .foregroundColor(.secondary)
 
                         Button(action: {
-                            onFollowUp("请对比【\(word)】与最容易混淆的常见近义词的核心差异与适用语境。")
+                            let prompt = isChineseWord
+                                ? "请给出【\(word)】在不同口语与职场语境下最地道的英文表达及词义差异对比。"
+                                : "请对比【\(word)】与最容易混淆的常见近义词的核心差异与适用语境。"
+                            onFollowUp(prompt)
                         }) {
                             HStack(spacing: 2) {
                                 Image(systemName: "lightbulb")
-                                Text("近义辨析")
+                                Text(isChineseWord ? "地道表达" : "近义辨析")
                             }
                             .font(.system(size: 10))
                             .padding(.horizontal, 6)
@@ -125,11 +132,14 @@ public struct AIMentalModelCardView: View {
                         .buttonStyle(.plain)
 
                         Button(action: {
-                            onFollowUp("请为【\(word)】提供 3 个地道商务或日常会话例句，并分析用法。")
+                            let prompt = isChineseWord
+                                ? "请为【\(word)】的英文翻译提供 3 个地道商务或日常会话例句，并分析用法。"
+                                : "请为【\(word)】提供 3 个地道商务或日常会话例句，并分析用法。"
+                            onFollowUp(prompt)
                         }) {
                             HStack(spacing: 2) {
                                 Image(systemName: "pencil.and.outline")
-                                Text("场景造句")
+                                Text(isChineseWord ? "场景例句" : "场景造句")
                             }
                             .font(.system(size: 10))
                             .padding(.horizontal, 6)

@@ -851,7 +851,7 @@ PYEOF
         git rm --cached .GEMINI.MD gemini.md 2>/dev/null || true
         git add -A
         git reset *.dmg *.zip .GEMINI.MD gemini.md 2>/dev/null || true
-        git commit -m "fix: 严格隔离英音与美音发音，彻底修复柯林斯串音与跨口音回退错配" 2>/dev/null || true
+        git commit -m "fix: 彻底修复连续查词时右侧空白、中文词典超时竞态与滚动区脱节问题" 2>/dev/null || true
         if git push -u origin main 2>&1; then
             echo "   ✅ 成功推送至 GitHub 仓库: https://github.com/Zachary-du/aidict"
         else
@@ -901,6 +901,7 @@ case "$COMMAND" in
     config)             shift; do_config "$@" ;;
     log)                shift; do_log "$@" ;;
     debug)              shift; do_debug "$@" ;;
+    exec)               shift; "$@" ;;
     help)               print_usage ;;
     *)                  print_usage ;;
 esac

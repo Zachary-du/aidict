@@ -131,8 +131,23 @@ public final class DictionaryEngine: ObservableObject, @unchecked Sendable {
         let isChinese = queryWord.range(of: "\\p{Han}", options: .regularExpression) != nil
         let autoRunAI = (triggerSource == .manual) || SettingsStore.shared.aiAutoTriggerOnHover || isMultiWord || isChinese
 
+        // 若为中文词汇，仅启用支持中文的词典源（系统词典、AI中译英、自定义词典），
+        // 自动跳过纯英文词典（朗文、柯林斯、FreeDict、Wiktionary、Merriam-Webster），杜绝8秒超时与无意义报错
+        let englishOnlySourceIds: Set<String> = [
+            "longman", "collins_cobuild", "free_dictionary_api", "wiktionary", "merriam_webster"
+        ]
+        var sourcesToQuery = enabledSources.filter { source in
+            if isChinese && englishOnlySourceIds.contains(source.id) {
+                return false
+            }
+            return true
+        }
+        if isChinese && sourcesToQuery.isEmpty {
+            sourcesToQuery = allSources.filter { $0.id == "ai_engine" || $0.id == "system_oxford" }
+        }
+
         // 初始化各数据源的加载骨架（悬停且未开启自动AI时，AI 源直接呈现为待触发 .idle 状态）
-        self.results = enabledSources.map { source in
+        self.results = sourcesToQuery.map { source in
             let displayName = (source.id == "ai_engine" && isChinese) ? "AI 中译英解析" : source.name
             if source.id == "ai_engine" && !autoRunAI {
                 return DictionaryResult(
@@ -152,7 +167,7 @@ public final class DictionaryEngine: ObservableObject, @unchecked Sendable {
 
         activeTask = Task { @MainActor in
             await withTaskGroup(of: DictionaryResult.self) { group in
-                for source in enabledSources {
+                for source in sourcesToQuery {
                     if source.id == "ai_engine" && !autoRunAI {
                         // 跳过自动触发，等待用户主动点击卡片上的深度解析按钮，保护每日配额
                         continue
@@ -163,7 +178,7 @@ public final class DictionaryEngine: ObservableObject, @unchecked Sendable {
                         } catch {
                             return DictionaryResult(
                                 sourceId: source.id,
-                                sourceName: source.name,
+                                sourceName: (source.id == "ai_engine" && isChinese) ? "AI 中译英解析" : source.name,
                                 word: queryWord,
                                 status: .failure(error.localizedDescription)
                             )
@@ -172,9 +187,14 @@ public final class DictionaryEngine: ObservableObject, @unchecked Sendable {
                 }
 
                 for await result in group {
-                    if Task.isCancelled { break }
+                    // 若当前任务已被取消，或已有新词条被查询，立刻丢弃并终止
+                    if Task.isCancelled || self.currentWord != queryWord {
+                        break
+                    }
                     if let index = self.results.firstIndex(where: { $0.sourceId == result.sourceId }) {
                         self.results[index] = result
+                    } else {
+                        self.results.append(result)
                     }
                     if result.sourceId == "ai_engine",
                        let aiText = result.aiAnalysis ?? result.definitions.first?.meaning,
@@ -188,6 +208,11 @@ public final class DictionaryEngine: ObservableObject, @unchecked Sendable {
                 }
             }
 
+            // 关键守护：如果任务已被取消，或用户已切换到其他词条，绝不能触碰全局状态与发音！
+            guard !Task.isCancelled && self.currentWord == queryWord else {
+                return
+            }
+
             self.isSearching = false
 
             // 记录查词历史
@@ -195,8 +220,8 @@ public final class DictionaryEngine: ObservableObject, @unchecked Sendable {
             let summary = self.results.compactMap({ $0.definitions.first?.meaning }).first ?? ""
             HistoryStore.shared.recordLookup(word: queryWord, phonetic: ph, summary: summary)
 
-            // 若配置了自动发音，查询完成后播放首个可用音频或 TTS
-            if SettingsStore.shared.playAudioOnLookup {
+            // 若配置了自动发音，查询完成后播放首个可用音频或 TTS（中文词汇跳过英文发音）
+            if SettingsStore.shared.playAudioOnLookup && !isChinese {
                 let accent = SettingsStore.shared.preferredAccent
                 let usAudio = self.results.compactMap({ $0.audioURL }).first
                 let ukAudio = self.results.compactMap({ $0.audioURL_uk }).first

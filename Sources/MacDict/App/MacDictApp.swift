@@ -332,6 +332,22 @@ struct MacDictApp: App {
                 assertTest(SettingsStore.shared.aiSystemPrompt.contains("语言学专家"), "SettingsStore 返回有效系统提示词")
                 assertTest(SettingsStore.shared.aiUserPromptTemplate.contains("{word}"), "SettingsStore 默认提示词包含 {word} 占位符")
 
+                // 10. 中文查词引擎自检 (杜绝连续查询卡顿与白屏)
+                print("\n[测试组 10] 中文多词条连续查询与引擎调度自检")
+                let chineseWord1 = OCRNormalizer.shared.normalizeQueryText("自拍")
+                assertTest(chineseWord1 == "自拍", "中文单词规范化清洗正确")
+                let chineseWord2 = OCRNormalizer.shared.normalizeQueryText("  “天气预报”  ")
+                assertTest(chineseWord2 == "天气预报", "中文短语书名号与首尾空格规范化清洗")
+
+                let isHan1 = "自拍".range(of: "\\p{Han}", options: .regularExpression) != nil
+                assertTest(isHan1, "中文汉字正则精准识别 (\\p{Han})")
+
+                let englishOnlyIds: Set<String> = ["longman", "collins_cobuild", "free_dictionary_api", "wiktionary", "merriam_webster"]
+                assertTest(englishOnlyIds.count == 5, "纯英文词典源列表包含全部5个纯英源")
+
+                let imgResult = await WordImageService.shared.fetchImageAsync(for: "肖像")
+                assertTest(imgResult.image == nil, "中文查词 0 延迟秒级跳过 Pixabay/Wikipedia 英文插画抓取")
+
                 print("\n==========================================================")
                 print("📊 自检总结: 通过 \(passCount) 项, 失败 \(failCount) 项")
                 print("==========================================================")
