@@ -261,6 +261,7 @@ public struct HUDView: View {
             isEditing = false
             viewMode = .dictionary
             HUDPanel.shared.isInAIChat = false
+            MovieSceneWindowController.shared.updateWordIfVisible(word: newWord)
         }
     }
 
@@ -430,6 +431,27 @@ public struct HUDView: View {
             }
             .buttonStyle(.plain)
             .help(isStarred ? "已移出生词本" : "加入生词本")
+
+            // 影视原声按钮 (点按独立弹窗打开，绝非默认打开)
+            Button(action: {
+                let word = engine.currentWord
+                let hudFrame = HUDPanel.shared.frame
+                MovieSceneWindowController.shared.show(word: word, relativeTo: hudFrame)
+            }) {
+                HStack(spacing: 3) {
+                    Image(systemName: "film.stack")
+                        .font(.system(size: 11))
+                    Text("影视")
+                        .font(.system(size: 11, weight: .bold))
+                }
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .foregroundColor(.purple)
+                .background(Color.purple.opacity(0.12))
+                .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+            .help("在独立弹窗中查看该词的经典欧美影视原声名场面例句")
 
             // 问AI 按钮 (平滑切换进入气泡问答)
             Button(action: {

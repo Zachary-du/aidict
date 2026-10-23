@@ -7,6 +7,8 @@ public struct AIMarkdownView: View {
     public var baseFontSize: CGFloat = 12
     public var textColor: Color = .primary.opacity(0.92)
 
+    @ObservedObject private var audioPlayer = AudioPlayer.shared
+
     public init(_ text: String, baseFontSize: CGFloat = 12, textColor: Color = .primary.opacity(0.92)) {
         self.text = text
         self.baseFontSize = baseFontSize
@@ -42,10 +44,7 @@ public struct AIMarkdownView: View {
                     .frame(width: 8, alignment: .trailing)
                     .padding(.top, 1)
 
-                formattedText(content)
-                    .font(.system(size: baseFontSize))
-                    .lineSpacing(3.5)
-                    .foregroundColor(textColor)
+                renderTextLine(content)
             }
             .padding(.leading, CGFloat(indent) * 12)
 
@@ -57,10 +56,7 @@ public struct AIMarkdownView: View {
                     .frame(minWidth: 16, alignment: .trailing)
                     .padding(.top, 1)
 
-                formattedText(content)
-                    .font(.system(size: baseFontSize))
-                    .lineSpacing(3.5)
-                    .foregroundColor(textColor)
+                renderTextLine(content)
             }
             .padding(.leading, CGFloat(indent) * 12)
 
@@ -106,7 +102,50 @@ public struct AIMarkdownView: View {
             Divider().opacity(0.5).padding(.vertical, 2)
 
         case .paragraph(let content):
-            formattedText(content)
+            let lines = content.components(separatedBy: "\n")
+            if lines.count > 1 {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
+                        renderTextLine(line)
+                    }
+                }
+            } else {
+                renderTextLine(content)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func renderTextLine(_ line: String) -> some View {
+        if let sentence = ExampleSentenceDetector.extractEnglishSentence(from: line) {
+            let isPlaying = (audioPlayer.currentlyPlayingText == sentence)
+            HStack(alignment: .top, spacing: 6) {
+                formattedText(line)
+                    .font(.system(size: baseFontSize))
+                    .lineSpacing(3.5)
+                    .foregroundColor(textColor)
+
+                Spacer(minLength: 4)
+
+                Button(action: {
+                    if isPlaying {
+                        audioPlayer.stop()
+                    } else {
+                        audioPlayer.playSentence(text: sentence)
+                    }
+                }) {
+                    Image(systemName: isPlaying ? "speaker.wave.2.fill" : "speaker.wave.2")
+                        .font(.system(size: 10))
+                        .foregroundColor(isPlaying ? .accentColor : .secondary.opacity(0.75))
+                        .frame(width: 18, height: 18)
+                        .background(isPlaying ? Color.accentColor.opacity(0.15) : Color.primary.opacity(0.04))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .help(isPlaying ? "停止朗读" : "朗读此例句 (AI神经语音)")
+            }
+        } else {
+            formattedText(line)
                 .font(.system(size: baseFontSize))
                 .lineSpacing(3.5)
                 .foregroundColor(textColor)

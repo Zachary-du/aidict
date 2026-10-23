@@ -348,6 +348,33 @@ struct MacDictApp: App {
                 let imgResult = await WordImageService.shared.fetchImageAsync(for: "肖像")
                 assertTest(imgResult.image == nil, "中文查词 0 延迟秒级跳过 Pixabay/Wikipedia 英文插画抓取")
 
+                // 11. AI 回答例句点按发声与影视原声自检
+                print("\n[测试组 11] AI 回答例句提取识别与影视原声视窗自检")
+                let exLine1 = "例句: The kitchen is fully equipped with modern stainless steel appliances."
+                let extracted1 = ExampleSentenceDetector.extractEnglishSentence(from: exLine1)
+                assertTest(extracted1 == "The kitchen is fully equipped with modern stainless steel appliances.", "AI 英文例句行精准提取英文句子")
+
+                let zhLine1 = "中文对照: 这个厨房配备了全套现代化的不锈钢厨具。"
+                let extractedZh = ExampleSentenceDetector.extractEnglishSentence(from: zhLine1)
+                assertTest(extractedZh == nil, "中文对照行严格过滤不发音 (返回 nil)")
+
+                let defLine = "1. 词性与音标"
+                assertTest(ExampleSentenceDetector.extractEnglishSentence(from: defLine) == nil, "词性音标标题行严格过滤不发音")
+
+                let bulletEx = "• He held a stainless knife. (他拿着一把不锈钢刀。)"
+                let extractedBullet = ExampleSentenceDetector.extractEnglishSentence(from: bulletEx)
+                assertTest(extractedBullet == "He held a stainless knife.", "列表型例句剥离中文括号精准提取英文")
+
+                let dummyMovie = MovieSceneItem(
+                    title: "Breaking Bad / 绝命毒师",
+                    seasonEpisode: "S04E04",
+                    character: "Hank Schrader",
+                    quote: "It's all over the stainless steel.",
+                    translation: "到处都是不锈钢上。"
+                )
+                assertTest(dummyMovie.title.contains("Breaking Bad") && dummyMovie.character == "Hank Schrader", "影视原声数据结构构造完整有效")
+                assertTest(AudioPlayer.shared.currentlyPlayingText == nil, "AudioPlayer 默认空闲状态校验 (绝无自动播放)")
+
                 print("\n==========================================================")
                 print("📊 自检总结: 通过 \(passCount) 项, 失败 \(failCount) 项")
                 print("==========================================================")

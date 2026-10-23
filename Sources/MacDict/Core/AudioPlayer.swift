@@ -1,15 +1,32 @@
 import Foundation
 import AVFoundation
 
-public final class AudioPlayer: NSObject, @unchecked Sendable {
+public final class AudioPlayer: NSObject, ObservableObject, @unchecked Sendable {
     public static let shared = AudioPlayer()
+
+    @Published public var currentlyPlayingText: String? = nil
 
     private let synthesizer = AVSpeechSynthesizer()
     private var networkPlayer: AVPlayer?
     private var currentAudioTask: Task<Void, Never>?
+    private var playerEndObserver: Any?
 
     private override init() {
         super.init()
+        synthesizer.delegate = self
+        playerEndObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.currentlyPlayingText = nil
+        }
+    }
+
+    deinit {
+        if let obs = playerEndObserver {
+            NotificationCenter.default.removeObserver(obs)
+        }
     }
 
     /// 朗读单词或文本，优先使用真实词典原声，次选 AI 神经高保真语音，最后回退到系统本地 TTS
@@ -67,6 +84,8 @@ public final class AudioPlayer: NSObject, @unchecked Sendable {
 
         let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanText.isEmpty else { return }
+
+        self.currentlyPlayingText = cleanText
 
         // 1. 如果有词典原厂真人录音直链，直接播放
         if let urlStr = audioURL, !urlStr.isEmpty, let url = URL(string: urlStr) {
@@ -145,6 +164,7 @@ public final class AudioPlayer: NSObject, @unchecked Sendable {
         if synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate) }
         networkPlayer?.pause()
         networkPlayer = nil
+        currentlyPlayingText = nil
     }
 
     /// 列出所有可用的英语声音
@@ -152,5 +172,20 @@ public final class AudioPlayer: NSObject, @unchecked Sendable {
         AVSpeechSynthesisVoice.speechVoices()
             .filter { $0.language.hasPrefix("en") }
             .map { (id: $0.identifier, name: $0.name, lang: $0.language) }
+    }
+}
+
+// MARK: - AVSpeechSynthesizerDelegate
+extension AudioPlayer: AVSpeechSynthesizerDelegate {
+    public func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        Task { @MainActor in
+            self.currentlyPlayingText = nil
+        }
+    }
+
+    public func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
+        Task { @MainActor in
+            self.currentlyPlayingText = nil
+        }
     }
 }

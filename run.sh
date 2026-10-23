@@ -851,7 +851,7 @@ PYEOF
         git rm --cached .GEMINI.MD gemini.md 2>/dev/null || true
         git add -A
         git reset *.dmg *.zip .GEMINI.MD gemini.md 2>/dev/null || true
-        git commit -m "fix: 彻底修复连续查词时右侧空白、中文词典超时竞态与滚动区脱节问题" 2>/dev/null || true
+        git commit -m "feat: 新增独立影视原声名场面弹窗与 AI 回答例句独立小喇叭点按朗读功能" 2>/dev/null || true
         if git push -u origin main 2>&1; then
             echo "   ✅ 成功推送至 GitHub 仓库: https://github.com/Zachary-du/aidict"
         else

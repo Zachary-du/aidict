@@ -97,12 +97,8 @@ public struct AIMentalModelCardView: View {
                 .cornerRadius(6)
             }
 
-            // 心智模型 Markdown 释义正文
-            Text(LocalizedStringKey(aiText))
-                .font(.system(size: 12))
-                .foregroundColor(.primary.opacity(0.95))
-                .lineSpacing(3.5)
-                .textSelection(.enabled)
+            // 心智模型 Markdown 释义正文（支持单句独立小喇叭发音）
+            AIMarkdownView(aiText, baseFontSize: 12, textColor: .primary.opacity(0.95))
 
             // 快捷追问与自由问答胶囊
             if let onFollowUp = onFollowUp {
@@ -148,6 +144,23 @@ public struct AIMentalModelCardView: View {
                             .cornerRadius(5)
                         }
                         .buttonStyle(.plain)
+
+                        Button(action: {
+                            MovieSceneWindowController.shared.show(word: word)
+                        }) {
+                            HStack(spacing: 2) {
+                                Image(systemName: "film.stack")
+                                Text("影视台词")
+                            }
+                            .font(.system(size: 10))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(Color.purple.opacity(0.08))
+                            .foregroundColor(.purple)
+                            .cornerRadius(5)
+                        }
+                        .buttonStyle(.plain)
+                        .help("在独立弹窗中查看该词的经典影视原声名场面例句")
 
                         Spacer()
 

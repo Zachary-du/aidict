@@ -337,6 +337,25 @@ public struct MainWindowView: View {
                     .buttonStyle(.plain)
                     .help(isStarred ? "已移出生词本" : "收录至生词本")
 
+                    // 影视原声名场面独立弹窗按钮 (点按才打开)
+                    Button(action: {
+                        MovieSceneWindowController.shared.show(word: currentWord)
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "film.stack")
+                                .font(.system(size: 12))
+                            Text("影视原声")
+                                .font(.system(size: 11, weight: .semibold))
+                        }
+                        .foregroundColor(.purple)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.purple.opacity(0.12))
+                        .cornerRadius(6)
+                    }
+                    .buttonStyle(.plain)
+                    .help("在独立画中画弹窗中查看该词的欧美影视原声台词名场面")
+
                     // AI 智能问答对话
                     Button(action: {
                         AIChatWindowController.shared.show(
@@ -476,6 +495,7 @@ public struct MainWindowView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .onChange(of: currentWord) { _ in
                         proxy.scrollTo("MAIN_DETAIL_TOP", anchor: .top)
+                        MovieSceneWindowController.shared.updateWordIfVisible(word: currentWord)
                     }
                 }
             }
