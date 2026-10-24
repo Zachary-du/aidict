@@ -119,10 +119,115 @@ public final class MovieSceneService: ObservableObject {
         }
     }
 
-    // MARK: - 真实影视切片原声抓取 (100% 真实原音录音)
+    // MARK: - 句子质量与长句过滤
+    /// 判断是否为合格的影视原声对话完整长句子（严格过滤单字呼喊、音效标签与无意义歌词）
+    public static func isValidSentenceQuote(_ rawQuote: String) -> Bool {
+        // 1. 去除音效括号如 [screaming], (laughter), 和歌词标签 # ... #
+        var clean = rawQuote
+            .replacingOccurrences(of: "\\[[^\\]]*\\]", with: " ", options: .regularExpression)
+            .replacingOccurrences(of: "\\([^\\)]*\\)", with: " ", options: .regularExpression)
+            .replacingOccurrences(of: "#[^#]*#", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !clean.isEmpty else { return false }
+
+        // 2. 提取词汇 tokens
+        let words = clean.components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+
+        // 3. 必须至少有 5 个英文单词，绝不接受 1~4 个词的单字呼喊
+        guard words.count >= 5 else { return false }
+
+        // 4. 至少要有 4 个不重复单词，防止单字复读 (如 "Senior, senior, senior, senior")
+        let uniqueWords = Set(words.map { $0.lowercased() })
+        guard uniqueWords.count >= 4 else { return false }
+
+        return true
+    }
+
+    /// 计算台词质量评分（词数越多、信息越丰富、语境越完整的分数越高）
+    public static func sentenceQualityScore(_ rawQuote: String) -> Int {
+        guard isValidSentenceQuote(rawQuote) else { return 0 }
+        let clean = rawQuote
+            .replacingOccurrences(of: "\\[[^\\]]*\\]", with: " ", options: .regularExpression)
+            .replacingOccurrences(of: "\\([^\\)]*\\)", with: " ", options: .regularExpression)
+            .replacingOccurrences(of: "#[^#]*#", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let words = clean.components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+        return words.count
+    }
+
+    // MARK: - 真实影视切片原声抓取 (100% 真实原音录音，长句对白严选)
     private func fetchYarnClips(word: String) async -> [MovieSceneItem] {
-        guard let encoded = word.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: "https://yarn.co/yarn-find?text=\(encoded)") else {
+        guard let encoded = word.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed), !encoded.isEmpty else {
+            return []
+        }
+
+        // 并发检索前 4 页切片数据 (每页 20 条，共检索 80 条)，确保筛选出真正高质量的完整长句子
+        let pages = [0, 1, 2, 3]
+        var allCandidateItems: [MovieSceneItem] = []
+
+        await withTaskGroup(of: [MovieSceneItem].self) { group in
+            for page in pages {
+                group.addTask {
+                    return await self.fetchYarnPage(encodedWord: encoded, page: page)
+                }
+            }
+
+            for await pageItems in group {
+                allCandidateItems.append(contentsOf: pageItems)
+            }
+        }
+
+        // 去重与优质长句子过滤
+        var seenIds = Set<String>()
+        var validClips: [MovieSceneItem] = []
+
+        for item in allCandidateItems {
+            guard !seenIds.contains(item.id) else { continue }
+            seenIds.insert(item.id)
+
+            // 严格过滤：必须是 5 个单词以上且词汇不重复的完整长句子
+            if Self.isValidSentenceQuote(item.quote) {
+                validClips.append(item)
+            }
+        }
+
+        // 如果单词检索未能凑足 3 条优质长句，尝试补充常见短语或搭配检索 (例如 "a " + word, "the " + word)
+        if validClips.count < 3 {
+            let collocations = ["a \(word)", "the \(word)"]
+            await withTaskGroup(of: [MovieSceneItem].self) { group in
+                for phrase in collocations {
+                    if let encPhrase = phrase.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+                        group.addTask {
+                            return await self.fetchYarnPage(encodedWord: encPhrase, page: 0)
+                        }
+                    }
+                }
+                for await phraseItems in group {
+                    for item in phraseItems {
+                        guard !seenIds.contains(item.id) else { continue }
+                        seenIds.insert(item.id)
+                        if Self.isValidSentenceQuote(item.quote) {
+                            validClips.append(item)
+                        }
+                    }
+                }
+            }
+        }
+
+        // 按句子单词丰富度与质量由高到低排序，优先呈现语境最丰富、最生动完整的名场面长台词
+        validClips.sort {
+            Self.sentenceQualityScore($0.quote) > Self.sentenceQualityScore($1.quote)
+        }
+
+        return Array(validClips.prefix(5))
+    }
+
+    private func fetchYarnPage(encodedWord: String, page: Int) async -> [MovieSceneItem] {
+        let pageParam = page > 0 ? "&p=\(page)" : ""
+        guard let url = URL(string: "https://yarn.co/yarn-find?text=\(encodedWord)\(pageParam)") else {
             return []
         }
 
@@ -146,14 +251,9 @@ public final class MovieSceneService: ObservableObject {
             let matches = regex.matches(in: html, options: [], range: NSRange(location: 0, length: nsHTML.length))
 
             var items: [MovieSceneItem] = []
-            var seenIds = Set<String>()
-
             for m in matches {
                 guard m.numberOfRanges >= 5 else { continue }
                 let cid = nsHTML.substring(with: m.range(at: 1))
-                if seenIds.contains(cid) { continue }
-                seenIds.insert(cid)
-
                 let rawTitle = nsHTML.substring(with: m.range(at: 2))
                 let rawTime = nsHTML.substring(with: m.range(at: 3))
                 let rawText = nsHTML.substring(with: m.range(at: 4))
@@ -176,10 +276,7 @@ public final class MovieSceneService: ObservableObject {
                     posterURL: "https://y.yarn.co/\(cid)_screenshot.jpg",
                     isRealSoundtrack: true
                 ))
-
-                if items.count >= 5 { break }
             }
-
             return items
         } catch {
             return []
@@ -372,13 +469,16 @@ public final class MovieSceneService: ObservableObject {
 
         let prompt = """
 请为英文词汇「\(word)」从欧美知名经典影视剧（如《绝命毒师》《老友记》《生活大爆炸》《摩登家庭》《神探夏洛克》《钢铁侠》等）中检索 3 个真实名场面台词。
+台词要求：
+1. 必须是完整的英文长句子（要求在 8~25 个英文单词），必须自然包含「\(word)」，严禁只输出孤立单词或一两个词的简短感叹！
+2. 必须来自真实影视剧情，具有生动地道的语境。
 必须严格返回 JSON 数组格式：
 [
   {
     "title": "影视剧中英文名",
     "seasonEpisode": "S04E04 或 2008",
     "character": "角色名",
-    "quote": "真实英文原声台词",
+    "quote": "真实英文原声台词完整长句子",
     "translation": "中文对照翻译",
     "context": "剧情语境解读"
   }
@@ -388,7 +488,7 @@ public final class MovieSceneService: ObservableObject {
         let requestBody: [String: Any] = [
             "model": model,
             "messages": [
-                ["role": "system", "content": "你是一位电影学者，熟悉经典欧美影视剧真实台词。请严格以 JSON 格式输出。"],
+                ["role": "system", "content": "你是一位专业的电影学者，熟悉经典欧美影视剧真实台词。输出的台词必须是 8~25 个单词的完整对白长句子，严禁简短单字呼喊。请严格以 JSON 格式输出。"],
                 ["role": "user", "content": prompt]
             ],
             "temperature": 0.2
@@ -430,7 +530,7 @@ public final class MovieSceneService: ObservableObject {
         }
 
         return rawItems.compactMap { r in
-            guard let q = r.quote, !q.isEmpty, let tr = r.translation, !tr.isEmpty else { return nil }
+            guard let q = r.quote, Self.isValidSentenceQuote(q), let tr = r.translation, !tr.isEmpty else { return nil }
             return MovieSceneItem(
                 title: r.title ?? "经典欧美影视",
                 seasonEpisode: r.seasonEpisode,
@@ -478,7 +578,14 @@ public final class MovieSceneService: ObservableObject {
         let url = fileURL(for: word)
         guard FileManager.default.fileExists(atPath: url.path),
               let data = try? Data(contentsOf: url),
-              let items = try? JSONDecoder().decode([MovieSceneItem].self, from: data) else {
+              let items = try? JSONDecoder().decode([MovieSceneItem].self, from: data),
+              !items.isEmpty else {
+            return nil
+        }
+        // 如果旧缓存中包含单字呼喊或不合格短台词，立即作废并移除该缓存文件，以便重新抓取长句子
+        let allValid = items.allSatisfy { Self.isValidSentenceQuote($0.quote) }
+        guard allValid else {
+            try? FileManager.default.removeItem(at: url)
             return nil
         }
         return items

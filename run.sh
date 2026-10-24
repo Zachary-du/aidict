@@ -678,30 +678,29 @@ function check_github_env() {
     TOKEN=""
     TOKEN_SRC=""
 
-    # 1. 扫描当前目录、父目录、用户主目录中的 Token 文件
-    for cand in \
-        "./github_token.txt" "./token.txt" "./token" "./.github_token" "./.token" "./GITHUB_TOKEN" "./gh_token.txt" "./github.txt" "./git_token.txt" \
-        "../github_token.txt" "../token.txt" "../token" "../.github_token" "../.token" "../GITHUB_TOKEN" "../gh_token.txt" "../github.txt" "../git_token.txt" \
-        "$HOME/github_token.txt" "$HOME/token.txt" "$HOME/token" "$HOME/.github_token" "$HOME/.token" "$HOME/GITHUB_TOKEN" "$HOME/gh_token.txt" \
-        "$HOME/Downloads/github_token.txt" "$HOME/Downloads/token.txt" "$HOME/Downloads/token"
-    do
-        if [ -f "$cand" ]; then
-            raw=$(head -n 5 "$cand" | grep -E "(ghp_|github_pat_|[a-zA-Z0-9_]{30,})" | head -1 | tr -d ' \n\r')
-            if [ -n "$raw" ]; then
-                TOKEN="$raw"
-                TOKEN_SRC="$cand"
-                break
-            fi
-        fi
-    done
+    # 0. 优先检测当前 git remote origin 中已持久化绑定的 token
+    remote_url=$(git remote get-url origin 2>/dev/null || true)
+    if [[ "$remote_url" =~ (ghp_[a-zA-Z0-9]{30,}|github_pat_[a-zA-Z0-9_]{50,}) ]]; then
+        TOKEN="${BASH_REMATCH[1]}"
+        TOKEN_SRC="git remote origin"
+    fi
 
-    # 若未按文件名匹配到，在项目目录及父级扫描包含 ghp_ 或 github_pat_ 的文件
+    # 1. 扫描已知位置中的 Token 文件
     if [ -z "$TOKEN" ]; then
-        cand_grep=$(grep -rl --max-count=1 "ghp_\|github_pat_" . .. 2>/dev/null | grep -v "\.git" | grep -v "\.build" | head -1)
-        if [ -n "$cand_grep" ] && [ -f "$cand_grep" ]; then
-            TOKEN=$(grep -E -o "(ghp_[a-zA-Z0-9]{30,}|github_pat_[a-zA-Z0-9_]{50,})" "$cand_grep" | head -1 | tr -d ' \n\r')
-            TOKEN_SRC="$cand_grep"
-        fi
+        for cand in \
+            "./github_token.txt" "./token.txt" "./token" "./.github_token" "./.token" "./GITHUB_TOKEN" "./gh_token.txt" "./github.txt" "./git_token.txt" \
+            "$HOME/github_token.txt" "$HOME/token.txt" "$HOME/token" "$HOME/.github_token" "$HOME/.token" "$HOME/GITHUB_TOKEN" "$HOME/gh_token.txt" \
+            "$HOME/Downloads/github_token.txt" "$HOME/Downloads/token.txt" "$HOME/Downloads/token"
+        do
+            if [ -f "$cand" ]; then
+                raw=$(head -n 5 "$cand" | grep -E "(ghp_|github_pat_|[a-zA-Z0-9_]{30,})" | head -1 | tr -d ' \n\r')
+                if [ -n "$raw" ]; then
+                    TOKEN="$raw"
+                    TOKEN_SRC="$cand"
+                    break
+                fi
+            fi
+        done
     fi
 
     if [ -n "$TOKEN" ]; then
@@ -851,7 +850,7 @@ PYEOF
         git rm --cached .GEMINI.MD gemini.md 2>/dev/null || true
         git add -A
         git reset *.dmg *.zip .GEMINI.MD gemini.md 2>/dev/null || true
-        git commit -m "feat: 接入 100% 真实欧美影视原片音视频切片，彻底替换 AI 朗读为真实电影原声原音" 2>/dev/null || true
+        git commit -m "feat: 升级影视原声长句智能严选算法，全面杜绝单字呼喊，优先呈现地道欧美剧作长对白" 2>/dev/null || true
         if git push -u origin main 2>&1; then
             echo "   ✅ 成功推送至 GitHub 仓库: https://github.com/Zachary-du/aidict"
         else

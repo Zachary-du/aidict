@@ -378,6 +378,13 @@ struct MacDictApp: App {
                 assertTest(dummyMovie.videoURL?.contains("y.yarn.co") == true, "真实影视原片音视频切片直链校验通过")
                 assertTest(AudioPlayer.shared.currentlyPlayingText == nil, "AudioPlayer 默认空闲状态校验 (绝无自动播放)")
 
+                // 11.2 影视原声长句子对话质量过滤自检 (杜绝单字呼喊)
+                assertTest(MovieSceneService.isValidSentenceQuote("Senior...") == false, "影视原声严格过滤单个单词呼喊 (Senior... 不合格)")
+                assertTest(MovieSceneService.isValidSentenceQuote("Senior, senior, senior, senior") == false, "影视原声严格过滤单字复读 (4个相同词不合格)")
+                assertTest(MovieSceneService.isValidSentenceQuote("[screaming] Senior!") == false, "影视原声严格过滤音效标签与超短台词")
+                assertTest(MovieSceneService.isValidSentenceQuote("Yeah, I'm a senior. A senior. Okay. Cool.") == true, "影视原声认可完整长对白句子 (Modern Family 名场面通过)")
+                assertTest(MovieSceneService.sentenceQualityScore("Yeah, I'm a senior. A senior. Okay. Cool.") >= 8, "影视原声长句质量评分正常工作")
+
                 print("\n==========================================================")
                 print("📊 自检总结: 通过 \(passCount) 项, 失败 \(failCount) 项")
                 print("==========================================================")
