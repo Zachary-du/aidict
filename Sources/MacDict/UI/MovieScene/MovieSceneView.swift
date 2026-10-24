@@ -2,7 +2,6 @@ import SwiftUI
 
 public struct MovieSceneView: View {
     @ObservedObject var service = MovieSceneService.shared
-    @ObservedObject var audioPlayer = AudioPlayer.shared
 
     public init() {}
 
@@ -26,30 +25,12 @@ public struct MovieSceneView: View {
                         }
                     }
 
-                    Text("欧美经典影视剧真实台词与地道语境")
+                    Text("欧美经典影视剧原片截取 · 真实演员对白与环境音效")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
 
                 Spacer()
-
-                // 语速切换胶囊 (1.0x / 0.85x 慢读)
-                Button(action: {
-                    service.playbackSpeed = service.playbackSpeed == 1.0 ? 0.85 : 1.0
-                }) {
-                    HStack(spacing: 3) {
-                        Image(systemName: "gauge.medium")
-                            .font(.system(size: 10))
-                        Text(service.playbackSpeed == 1.0 ? "1.0x 原速" : "0.85x 慢读")
-                            .font(.system(size: 11, weight: .medium))
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.primary.opacity(0.06))
-                    .cornerRadius(6)
-                }
-                .buttonStyle(.plain)
-                .help("切换例句朗读语速")
 
                 // 刷新按钮
                 Button(action: {
@@ -66,7 +47,7 @@ public struct MovieSceneView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(service.isLoading)
-                .help("重新生成当前词条的影视台词")
+                .help("重新检索当前词条的影视原声")
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 12)
@@ -78,7 +59,7 @@ public struct MovieSceneView: View {
             if service.isLoading {
                 VStack(spacing: 12) {
                     ProgressView().scaleEffect(1.1)
-                    Text("正在从经典欧美影视库检索【\(service.currentWord)】的台词名场面...")
+                    Text("正在从经典影视库检索【\(service.currentWord)】的真实截取原声音频...")
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                 }
@@ -113,7 +94,7 @@ public struct MovieSceneView: View {
                 ScrollView(.vertical, showsIndicators: true) {
                     VStack(spacing: 14) {
                         ForEach(service.scenes) { scene in
-                            MovieSceneCard(scene: scene, targetWord: service.currentWord)
+                            RealMovieSceneCard(scene: scene, targetWord: service.currentWord)
                         }
                     }
                     .padding(18)
@@ -124,7 +105,7 @@ public struct MovieSceneView: View {
 
             // MARK: - 底栏提示
             HStack {
-                Text("💡 点击每张卡片右侧的小喇叭即可跟读原声音频，感受地道母语者会话语境。")
+                Text("🎬 标志的音频均为欧美电影/美剧原片真实截取录音（真实演员发音与背景音效，绝非 AI 朗读）。")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary.opacity(0.85))
                 Spacer()
@@ -133,105 +114,126 @@ public struct MovieSceneView: View {
             .padding(.vertical, 8)
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
         }
-        .frame(minWidth: 460, minHeight: 480)
+        .frame(minWidth: 500, minHeight: 480)
         .background(Color(NSColor.windowBackgroundColor))
     }
 }
 
-// MARK: - 单张影视台词卡片组件
-struct MovieSceneCard: View {
+// MARK: - 单张真实影视原声卡片组件
+struct RealMovieSceneCard: View {
     let scene: MovieSceneItem
     let targetWord: String
-    @ObservedObject var audioPlayer = AudioPlayer.shared
+    @ObservedObject var service = MovieSceneService.shared
 
     private var isPlaying: Bool {
-        audioPlayer.currentlyPlayingText == scene.quote
+        service.currentlyPlayingClipId == scene.id
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            // 剧目抬头与角色
-            HStack(spacing: 8) {
-                Image(systemName: "film")
-                    .font(.system(size: 12))
-                    .foregroundColor(.purple)
-
-                Text(scene.title)
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(.primary)
-
-                if let ep = scene.seasonEpisode, !ep.isEmpty {
-                    Text(ep)
-                        .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.purple.opacity(0.12))
-                        .foregroundColor(.purple)
-                        .cornerRadius(4)
-                }
-
-                if let ch = scene.character, !ch.isEmpty {
-                    Text("🎭 \(ch)")
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                }
-
-                Spacer()
-
-                // 原声朗读小喇叭按钮（点按触发，绝不默认自动播放）
-                Button(action: {
-                    if isPlaying {
-                        audioPlayer.stop()
+        HStack(alignment: .top, spacing: 12) {
+            // 影视剧照截图 (如果有)
+            if let poster = scene.posterURL, let url = URL(string: poster) {
+                AsyncImage(url: url) { phase in
+                    if let img = phase.image {
+                        img.resizable().aspectRatio(contentMode: .fill)
                     } else {
-                        audioPlayer.playSentence(text: scene.quote)
+                        Color.black.opacity(0.15)
                     }
-                }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: isPlaying ? "speaker.wave.3.fill" : "speaker.wave.2")
-                            .font(.system(size: 10))
-                        Text(isPlaying ? "停止" : "原声跟读")
-                            .font(.system(size: 11, weight: .medium))
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(isPlaying ? Color.accentColor.opacity(0.18) : Color.primary.opacity(0.06))
-                    .foregroundColor(isPlaying ? .accentColor : .primary.opacity(0.9))
-                    .cornerRadius(6)
                 }
-                .buttonStyle(.plain)
-                .help(isPlaying ? "停止朗读" : "朗读该台词原声 (AI神经语音)")
+                .frame(width: 90, height: 60)
+                .cornerRadius(6)
+                .clipped()
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.secondary.opacity(0.18), lineWidth: 0.5)
+                )
             }
 
-            // 英文原声台词（目标单词高亮）
-            highlightedQuoteView(scene.quote, highlight: targetWord)
-                .font(.system(size: 13, design: .serif))
-                .lineSpacing(3.5)
-                .textSelection(.enabled)
-
-            // 中文翻译
-            Text(scene.translation)
-                .font(.system(size: 12))
-                .foregroundColor(.secondary)
-                .lineSpacing(2.5)
-                .textSelection(.enabled)
-
-            // 剧作语境解读
-            if let ctx = scene.context, !ctx.isEmpty {
-                HStack(alignment: .top, spacing: 5) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 10))
-                        .foregroundColor(.amberColor)
-                        .padding(.top, 1)
-
-                    Text("语境：\(ctx)")
+            VStack(alignment: .leading, spacing: 7) {
+                // 剧名、原声标签与时长
+                HStack(spacing: 6) {
+                    Image(systemName: "film")
                         .font(.system(size: 11))
-                        .foregroundColor(.secondary.opacity(0.9))
-                        .lineSpacing(2)
+                        .foregroundColor(scene.isRealSoundtrack ? .red : .purple)
+
+                    Text(scene.title)
+                        .font(.system(size: 12.5, weight: .bold))
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+
+                    if scene.isRealSoundtrack {
+                        Text("🎬 电影原声")
+                            .font(.system(size: 9, weight: .bold))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(Color.red.opacity(0.12))
+                            .foregroundColor(.red)
+                            .cornerRadius(4)
+                    }
+
+                    if let ctx = scene.context, ctx.contains("时长") {
+                        Text(ctx)
+                            .font(.system(size: 9.5, weight: .medium, design: .monospaced))
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    // 真实原声播放小喇叭按钮（点按触发，绝非自动播放）
+                    Button(action: {
+                        service.playMovieAudio(scene: scene)
+                    }) {
+                        HStack(spacing: 4) {
+                            if service.isDownloadingClip && service.currentlyPlayingClipId == scene.id {
+                                ProgressView().scaleEffect(0.55).frame(width: 12, height: 12)
+                                Text("加载中...")
+                            } else {
+                                Image(systemName: isPlaying ? "speaker.wave.3.fill" : (scene.isRealSoundtrack ? "play.circle.fill" : "speaker.wave.2"))
+                                    .font(.system(size: 11))
+                                Text(isPlaying ? "停止" : (scene.isRealSoundtrack ? "原声播放" : "台词跟读"))
+                            }
+                        }
+                        .font(.system(size: 10.5, weight: .semibold))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(isPlaying ? Color.red.opacity(0.18) : (scene.isRealSoundtrack ? Color.red.opacity(0.08) : Color.primary.opacity(0.06)))
+                        .foregroundColor(isPlaying ? .red : (scene.isRealSoundtrack ? .red : .primary.opacity(0.88)))
+                        .cornerRadius(6)
+                    }
+                    .buttonStyle(.plain)
+                    .help(isPlaying ? "停止播放" : (scene.isRealSoundtrack ? "播放该电影/美剧真实截取的演员原声" : "朗读该台词"))
                 }
-                .padding(.top, 2)
+
+                // 英文原声台词（目标单词高亮）
+                highlightedQuoteView(scene.quote, highlight: targetWord)
+                    .font(.system(size: 13, design: .serif))
+                    .lineSpacing(3)
+                    .textSelection(.enabled)
+
+                // 中文翻译 (若有)
+                if !scene.translation.isEmpty {
+                    Text(scene.translation)
+                        .font(.system(size: 11.5))
+                        .foregroundColor(.secondary)
+                        .textSelection(.enabled)
+                }
+
+                // 剧作语境（若非纯时长）
+                if let ctx = scene.context, !ctx.contains("时长") && !ctx.isEmpty {
+                    HStack(alignment: .top, spacing: 4) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 9.5))
+                            .foregroundColor(.orange)
+                            .padding(.top, 1)
+
+                        Text("语境：\(ctx)")
+                            .font(.system(size: 10.5))
+                            .foregroundColor(.secondary.opacity(0.85))
+                    }
+                }
             }
         }
-        .padding(14)
+        .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(NSColor.controlBackgroundColor).opacity(0.45))
         .cornerRadius(10)
@@ -247,11 +249,10 @@ struct MovieSceneCard: View {
             return Text("“\(quote)”")
         }
 
-        // 简易单词高亮拼接
         let tokens = quote.components(separatedBy: " ")
         var result = Text("“")
         for (i, token) in tokens.enumerated() {
-            let lower = token.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: ".,!?;:\"'()[]"))
+            let lower = token.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: ".,!?;:\"'()[]*"))
             if lower == cleanHighlight || lower.contains(cleanHighlight) {
                 result = result + Text(token).bold().foregroundColor(.accentColor)
             } else {
@@ -264,8 +265,4 @@ struct MovieSceneCard: View {
         result = result + Text("”")
         return result
     }
-}
-
-extension Color {
-    static let amberColor = Color(red: 0.92, green: 0.65, blue: 0.15)
 }

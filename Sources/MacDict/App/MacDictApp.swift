@@ -366,13 +366,16 @@ struct MacDictApp: App {
                 assertTest(extractedBullet == "He held a stainless knife.", "列表型例句剥离中文括号精准提取英文")
 
                 let dummyMovie = MovieSceneItem(
-                    title: "Breaking Bad / 绝命毒师",
-                    seasonEpisode: "S04E04",
-                    character: "Hank Schrader",
-                    quote: "It's all over the stainless steel.",
-                    translation: "到处都是不锈钢上。"
+                    title: "Grey's Anatomy (2005) - S06E14",
+                    seasonEpisode: "S06E14",
+                    character: "Meredith Grey",
+                    quote: "Stainless steel.",
+                    translation: "不锈钢。",
+                    videoURL: "https://y.yarn.co/34cb2fd8-845a-4c73-a557-d74522e9e1ef.mp4",
+                    isRealSoundtrack: true
                 )
-                assertTest(dummyMovie.title.contains("Breaking Bad") && dummyMovie.character == "Hank Schrader", "影视原声数据结构构造完整有效")
+                assertTest(dummyMovie.title.contains("Grey's Anatomy") && dummyMovie.isRealSoundtrack, "影视原声数据结构构造完整有效")
+                assertTest(dummyMovie.videoURL?.contains("y.yarn.co") == true, "真实影视原片音视频切片直链校验通过")
                 assertTest(AudioPlayer.shared.currentlyPlayingText == nil, "AudioPlayer 默认空闲状态校验 (绝无自动播放)")
 
                 print("\n==========================================================")

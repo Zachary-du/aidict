@@ -93,7 +93,8 @@ public final class MovieSceneWindowController: NSObject, NSWindowDelegate {
 
     // MARK: - NSWindowDelegate
     public func windowWillClose(_ notification: Notification) {
-        // 关闭时若正在朗读，停止语音
+        // 关闭时停止所有音频
         AudioPlayer.shared.stop()
+        MovieSceneService.shared.stopAudio()
     }
 }
