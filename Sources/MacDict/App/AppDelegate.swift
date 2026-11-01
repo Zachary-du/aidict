@@ -18,11 +18,13 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         // 启动后台监听器
         HoverMonitor.shared.start()
         SelectionMonitor.shared.start()
+        DoubleClickMonitor.shared.start()
 
         aLog("App 启动完成 — 日志文件: \(AppLogger.shared.logFileURL.path)")
     }
 
     public func applicationWillTerminate(_ notification: Notification) {
         HoverMonitor.shared.stop()
+        DoubleClickMonitor.shared.stop()
     }
 }

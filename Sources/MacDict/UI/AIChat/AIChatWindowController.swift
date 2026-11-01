@@ -5,7 +5,7 @@ import SwiftUI
 public final class AIChatWindowController: NSObject, NSWindowDelegate {
     public static let shared = AIChatWindowController()
 
-    private var window: NSWindow?
+    public private(set) var window: NSWindow?
 
     private override init() {
         super.init()

@@ -4,10 +4,23 @@ import SwiftUI
 @MainActor
 public final class MainWindowController: NSObject, NSWindowDelegate {
     public static let shared = MainWindowController()
-    private var window: NSWindow?
+    public private(set) var window: NSWindow?
 
     private override init() {
         super.init()
+    }
+
+    public func lookupFromDoubleClick(_ word: String) {
+        let clean = word.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty else { return }
+        AudioPlayer.shared.stop()
+        if window == nil || window?.isVisible == false {
+            showWindow(word: clean)
+        } else {
+            DictionaryEngine.shared.lookup(word: clean, triggerSource: .manual)
+            window?.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        }
     }
 
     public func showWindow(word: String? = nil) {

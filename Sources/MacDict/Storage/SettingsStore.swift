@@ -10,6 +10,7 @@ public final class SettingsStore: ObservableObject, @unchecked Sendable {
     // MARK: - 取词开关
     @AppStorage("is_hover_lookup_enabled")   public var isHoverLookupEnabled: Bool = true    { willSet { objectWillChange.send() } }
     @AppStorage("is_shortcut_lookup_enabled") public var isShortcutLookupEnabled: Bool = true { willSet { objectWillChange.send() } }
+    @AppStorage("is_double_click_lookup_enabled") public var isDoubleClickLookupEnabled: Bool = true { willSet { objectWillChange.send() } }
     @AppStorage("hover_delay")               public var hoverDelay: Double = 0.45            { willSet { objectWillChange.send() } }
     @AppStorage("hover_requires_option_key") public var hoverRequiresOptionKey: Bool = false  { willSet { objectWillChange.send() } }
     @AppStorage("play_audio_on_lookup")      public var playAudioOnLookup: Bool = false       { willSet { objectWillChange.send() } }

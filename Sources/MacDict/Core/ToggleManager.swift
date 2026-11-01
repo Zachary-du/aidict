@@ -23,6 +23,12 @@ public final class ToggleManager: ObservableObject, @unchecked Sendable {
         showNotification(title: "划词快捷键", message: state ? "已开启" : "已关闭", icon: state ? "keyboard" : "keyboard.badge.ellipsis")
     }
 
+    public func toggleDoubleClickLookup() {
+        SettingsStore.shared.isDoubleClickLookupEnabled.toggle()
+        let state = SettingsStore.shared.isDoubleClickLookupEnabled
+        showNotification(title: "双击查词", message: state ? "已开启" : "已关闭", icon: state ? "hand.tap.fill" : "hand.tap")
+    }
+
     public func showNotification(title: String, message: String, icon: String) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }

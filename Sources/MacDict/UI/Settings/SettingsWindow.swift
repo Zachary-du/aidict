@@ -74,6 +74,7 @@ struct GeneralSettingsView: View {
                 }
 
                 Toggle("启用选中文本后快捷键查词", isOn: $settings.isShortcutLookupEnabled)
+                Toggle("启用双击单词查词 (在任意软件中双击英文单词即弹出查词)", isOn: $settings.isDoubleClickLookupEnabled)
                 Toggle("查词后自动朗读发音", isOn: $settings.playAudioOnLookup)
                 Toggle("查词时显示概念图示卡片", isOn: $settings.showIntuitiveCompanion)
             }
@@ -104,6 +105,16 @@ struct GeneralSettingsView: View {
                         Text("划词快捷键模式独立开关:")
                         Spacer()
                         Text("⌥ ⌘ S (Option + Cmd + S)")
+                            .font(.system(.body, design: .monospaced))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.secondary.opacity(0.12))
+                            .cornerRadius(4)
+                    }
+                    HStack {
+                        Text("双击单词直接查词:")
+                        Spacer()
+                        Text("双击任意英文单词 (词典内/全局)")
                             .font(.system(.body, design: .monospaced))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)

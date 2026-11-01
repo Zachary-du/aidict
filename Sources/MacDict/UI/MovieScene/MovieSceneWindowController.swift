@@ -5,7 +5,7 @@ import SwiftUI
 public final class MovieSceneWindowController: NSObject, NSWindowDelegate {
     public static let shared = MovieSceneWindowController()
 
-    private var window: NSWindow?
+    public private(set) var window: NSWindow?
 
     private override init() {
         super.init()

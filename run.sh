@@ -850,7 +850,7 @@ PYEOF
         git rm --cached .GEMINI.MD gemini.md 2>/dev/null || true
         git add -A
         git reset *.dmg *.zip .GEMINI.MD gemini.md 2>/dev/null || true
-        git commit -m "feat: 升级影视原声长句智能严选算法，全面杜绝单字呼喊，优先呈现地道欧美剧作长对白" 2>/dev/null || true
+        git commit -m "feat: 支持双击任意英文单词直接查词（应用内词典结果无缝跳转 + 全局任意应用双击弹出查词浮窗）" 2>/dev/null || true
         if git push -u origin main 2>&1; then
             echo "   ✅ 成功推送至 GitHub 仓库: https://github.com/Zachary-du/aidict"
         else

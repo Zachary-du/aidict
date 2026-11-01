@@ -114,6 +114,16 @@ public final class StatusMenuController: NSObject {
         shortcutItem.state = SettingsStore.shared.isShortcutLookupEnabled ? .on : .off
         menu.addItem(shortcutItem)
 
+        // 双击单词查词开关
+        let doubleClickItem = NSMenuItem(
+            title: "双击单词查词",
+            action: #selector(toggleDoubleClickAction),
+            keyEquivalent: ""
+        )
+        doubleClickItem.target = self
+        doubleClickItem.state = SettingsStore.shared.isDoubleClickLookupEnabled ? .on : .off
+        menu.addItem(doubleClickItem)
+
         // AI 智能问答对话 (⌥⌘A)
         let aiChatItem = NSMenuItem(
             title: "AI 智能问答对话...",
@@ -180,6 +190,10 @@ public final class StatusMenuController: NSObject {
 
     @objc private func toggleShortcutAction() {
         ToggleManager.shared.toggleShortcutLookup()
+    }
+
+    @objc private func toggleDoubleClickAction() {
+        ToggleManager.shared.toggleDoubleClickLookup()
     }
 
     @objc public func openMainWindowAction() {

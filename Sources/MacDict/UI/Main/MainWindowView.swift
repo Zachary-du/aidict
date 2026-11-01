@@ -493,7 +493,13 @@ public struct MainWindowView: View {
                     }
                     .id(currentWord)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .onChange(of: currentWord) { _ in
+                    .onChange(of: currentWord) { newWord in
+                        if !newWord.isEmpty {
+                            searchText = newWord
+                            if currentIndex < 0 || currentIndex >= navigationStack.count || navigationStack[currentIndex].lowercased() != newWord.lowercased() {
+                                pushWord(newWord, fetch: false)
+                            }
+                        }
                         proxy.scrollTo("MAIN_DETAIL_TOP", anchor: .top)
                         MovieSceneWindowController.shared.updateWordIfVisible(word: currentWord)
                     }
@@ -698,6 +704,7 @@ struct MainSourceResultCard: View {
                         .font(.system(size: 13, design: .serif))
                         .foregroundColor(.primary.opacity(0.92))
                         .lineSpacing(4)
+                        .textSelection(.enabled)
                 } else if let ai = result.aiAnalysis {
                     AIMentalModelCardView(word: result.word, aiText: ai)
                 } else {
