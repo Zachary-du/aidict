@@ -397,6 +397,7 @@ struct MacDictApp: App {
                 assertTest(DoubleClickMonitor.cleanLookupWord("https://example.com/test") == nil, "URL 网址严格过滤不查词 (返回 nil)")
                 assertTest(DoubleClickMonitor.cleanLookupWord("/Users/dylan/file.txt") == nil, "文件系统路径严格过滤不查词 (返回 nil)")
                 assertTest(DoubleClickMonitor.cleanLookupWord("男主持人") == "男主持人", "中文双击查词词汇保留支持")
+                assertTest(DoubleClickMonitor.cleanLookupWord("**anchor**") == "anchor", "带 Markdown 粗体的 **anchor** 精准提取目标单词")
 
                 print("\n==========================================================")
                 print("📊 自检总结: 通过 \(passCount) 项, 失败 \(failCount) 项")

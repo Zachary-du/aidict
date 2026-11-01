@@ -91,6 +91,24 @@ public struct MainWindowView: View {
                 navigateTo(word: first)
             }
         }
+        .onChange(of: currentWord) { newWord in
+            if !newWord.isEmpty {
+                searchText = newWord
+                if currentIndex < 0 || currentIndex >= navigationStack.count || navigationStack[currentIndex].lowercased() != newWord.lowercased() {
+                    pushWord(newWord, fetch: false)
+                }
+            }
+            MovieSceneWindowController.shared.updateWordIfVisible(word: newWord)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .doubleClickLookupRequested)) { notif in
+            if let w = notif.object as? String, !w.isEmpty {
+                searchText = w
+                if currentIndex < 0 || currentIndex >= navigationStack.count || navigationStack[currentIndex].lowercased() != w.lowercased() {
+                    pushWord(w, fetch: false)
+                }
+                MovieSceneWindowController.shared.updateWordIfVisible(word: w)
+            }
+        }
     }
 
     // MARK: - 左侧边栏视图
@@ -524,15 +542,8 @@ public struct MainWindowView: View {
                     }
                     .id(currentWord)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .onChange(of: currentWord) { newWord in
-                        if !newWord.isEmpty {
-                            searchText = newWord
-                            if currentIndex < 0 || currentIndex >= navigationStack.count || navigationStack[currentIndex].lowercased() != newWord.lowercased() {
-                                pushWord(newWord, fetch: false)
-                            }
-                        }
+                    .onChange(of: currentWord) { _ in
                         proxy.scrollTo("MAIN_DETAIL_TOP", anchor: .top)
-                        MovieSceneWindowController.shared.updateWordIfVisible(word: currentWord)
                     }
                 }
             }
@@ -731,11 +742,15 @@ struct MainSourceResultCard: View {
                     }
                     .padding(.vertical, 4)
                 } else if let raw = result.rawText, result.definitions.isEmpty {
-                    Text(raw)
-                        .font(.system(size: 13, design: .serif))
-                        .foregroundColor(.primary.opacity(0.92))
-                        .lineSpacing(4)
-                        .textSelection(.enabled)
+                    SelectableTextView(
+                        markdown: raw,
+                        fontSize: 13,
+                        textColor: NSColor.labelColor.withAlphaComponent(0.92),
+                        lineSpacing: 4,
+                        isSerif: true
+                    ) { word in
+                        MainWindowController.shared.lookupFromDoubleClick(word)
+                    }
                 } else if let ai = result.aiAnalysis {
                     AIMentalModelCardView(word: result.word, aiText: ai)
                 } else {
@@ -751,10 +766,14 @@ struct MainSourceResultCard: View {
                                         .background(Color.secondary.opacity(0.12))
                                         .cornerRadius(3)
 
-                                    Text(def.meaning)
-                                        .font(.system(size: 13, weight: .regular))
-                                        .foregroundColor(.primary)
-                                        .textSelection(.enabled)
+                                    SelectableTextView(
+                                        markdown: def.meaning,
+                                        fontSize: 13,
+                                        textColor: NSColor.labelColor,
+                                        lineSpacing: 3
+                                    ) { word in
+                                        MainWindowController.shared.lookupFromDoubleClick(word)
+                                    }
                                 }
 
                                 ForEach(def.exampleItems) { item in
@@ -763,11 +782,15 @@ struct MainSourceResultCard: View {
                                             .font(.system(size: 12))
                                             .foregroundColor(.secondary.opacity(0.6))
 
-                                        Text(item.text)
-                                            .font(.system(size: 12, design: .serif))
-                                            .foregroundColor(.secondary)
-                                            .lineSpacing(2)
-                                            .textSelection(.enabled)
+                                        SelectableTextView(
+                                            markdown: item.text,
+                                            fontSize: 12,
+                                            textColor: NSColor.secondaryLabelColor,
+                                            lineSpacing: 2,
+                                            isSerif: true
+                                        ) { word in
+                                            MainWindowController.shared.lookupFromDoubleClick(word)
+                                        }
 
                                         Spacer(minLength: 6)
 

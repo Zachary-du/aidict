@@ -30,11 +30,17 @@ public struct AIMarkdownView: View {
     private func renderBlock(_ kind: MarkdownBlockKind) -> some View {
         switch kind {
         case .heading(let level, let content):
-            formattedText(content)
-                .font(.system(size: headingSize(level), weight: .bold))
-                .foregroundColor(.primary)
-                .padding(.top, headingTopPadding(level))
-                .padding(.bottom, 1)
+            SelectableTextView(
+                markdown: content,
+                fontSize: headingSize(level),
+                weight: .bold,
+                textColor: NSColor.labelColor,
+                lineSpacing: 2
+            ) { word in
+                MainWindowController.shared.lookupFromDoubleClick(word)
+            }
+            .padding(.top, headingTopPadding(level))
+            .padding(.bottom, 1)
 
         case .bulletItem(let content, let indent):
             HStack(alignment: .top, spacing: 6) {
@@ -66,10 +72,14 @@ public struct AIMarkdownView: View {
                     .fill(Color.accentColor.opacity(0.65))
                     .frame(width: 3)
 
-                formattedText(content)
-                    .font(.system(size: baseFontSize - 0.5))
-                    .foregroundColor(.secondary)
-                    .lineSpacing(3)
+                SelectableTextView(
+                    markdown: content,
+                    fontSize: baseFontSize - 0.5,
+                    textColor: NSColor.secondaryLabelColor,
+                    lineSpacing: 3
+                ) { word in
+                    MainWindowController.shared.lookupFromDoubleClick(word)
+                }
             }
             .padding(.vertical, 2)
             .padding(.horizontal, 4)
@@ -84,10 +94,15 @@ public struct AIMarkdownView: View {
                         Spacer()
                     }
                 }
-                Text(code)
-                    .font(.system(size: baseFontSize - 1, design: .monospaced))
-                    .lineSpacing(2)
-                    .foregroundColor(.primary.opacity(0.95))
+                SelectableTextView(
+                    markdown: code,
+                    fontSize: baseFontSize - 1,
+                    textColor: NSColor(textColor),
+                    lineSpacing: 2,
+                    isMonospaced: true
+                ) { word in
+                    MainWindowController.shared.lookupFromDoubleClick(word)
+                }
             }
             .padding(8)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -120,10 +135,14 @@ public struct AIMarkdownView: View {
         if let sentence = ExampleSentenceDetector.extractEnglishSentence(from: line) {
             let isPlaying = (audioPlayer.currentlyPlayingText == sentence)
             HStack(alignment: .top, spacing: 6) {
-                formattedText(line)
-                    .font(.system(size: baseFontSize))
-                    .lineSpacing(3.5)
-                    .foregroundColor(textColor)
+                SelectableTextView(
+                    markdown: line,
+                    fontSize: baseFontSize,
+                    textColor: NSColor(textColor),
+                    lineSpacing: 3.5
+                ) { word in
+                    MainWindowController.shared.lookupFromDoubleClick(word)
+                }
 
                 Spacer(minLength: 4)
 
@@ -145,10 +164,14 @@ public struct AIMarkdownView: View {
                 .help(isPlaying ? "停止朗读" : "朗读此例句 (AI神经语音)")
             }
         } else {
-            formattedText(line)
-                .font(.system(size: baseFontSize))
-                .lineSpacing(3.5)
-                .foregroundColor(textColor)
+            SelectableTextView(
+                markdown: line,
+                fontSize: baseFontSize,
+                textColor: NSColor(textColor),
+                lineSpacing: 3.5
+            ) { word in
+                MainWindowController.shared.lookupFromDoubleClick(word)
+            }
         }
     }
 

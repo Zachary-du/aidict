@@ -1,6 +1,10 @@
 import AppKit
 import SwiftUI
 
+extension Notification.Name {
+    public static let doubleClickLookupRequested = Notification.Name("com.dylan.MacDict.doubleClickLookupRequested")
+}
+
 @MainActor
 public final class MainWindowController: NSObject, NSWindowDelegate {
     public static let shared = MainWindowController()
@@ -14,6 +18,7 @@ public final class MainWindowController: NSObject, NSWindowDelegate {
         let clean = word.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !clean.isEmpty else { return }
         AudioPlayer.shared.stop()
+        NotificationCenter.default.post(name: .doubleClickLookupRequested, object: clean)
         if window == nil || window?.isVisible == false {
             showWindow(word: clean)
         } else {
