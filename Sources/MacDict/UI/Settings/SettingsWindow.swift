@@ -74,7 +74,7 @@ struct GeneralSettingsView: View {
                 }
 
                 Toggle("启用选中文本后快捷键查词", isOn: $settings.isShortcutLookupEnabled)
-                Toggle("启用双击单词查词 (在任意软件中双击英文单词即弹出查词)", isOn: $settings.isDoubleClickLookupEnabled)
+                Toggle("词典内双击跳转查词 (在词典释义与AI解析中双击生词直接跳转查询)", isOn: $settings.isDoubleClickLookupEnabled)
                 Toggle("查词后自动朗读发音", isOn: $settings.playAudioOnLookup)
                 Toggle("查词时显示概念图示卡片", isOn: $settings.showIntuitiveCompanion)
             }
@@ -112,9 +112,9 @@ struct GeneralSettingsView: View {
                             .cornerRadius(4)
                     }
                     HStack {
-                        Text("双击单词直接查词:")
+                        Text("词典内生词双击跳转:")
                         Spacer()
-                        Text("双击任意英文单词 (词典内/全局)")
+                        Text("在释义或例句中直接双击任意单词")
                             .font(.system(.body, design: .monospaced))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)

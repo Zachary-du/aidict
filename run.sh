@@ -100,9 +100,9 @@ function do_build() {
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.1.0</string>
+    <string>1.2.0</string>
     <key>CFBundleVersion</key>
-    <string>110</string>
+    <string>120</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>LSUIElement</key>
@@ -850,7 +850,7 @@ PYEOF
         git rm --cached .GEMINI.MD gemini.md 2>/dev/null || true
         git add -A
         git reset *.dmg *.zip .GEMINI.MD gemini.md 2>/dev/null || true
-        git commit -m "feat: 支持双击任意英文单词直接查词（应用内词典结果无缝跳转 + 全局任意应用双击弹出查词浮窗）" 2>/dev/null || true
+        git commit -m "feat: 发布 v1.2.0 版本，严格限定双击查词仅在软件内部生效，主窗口底部常驻版本展示" 2>/dev/null || true
         if git push -u origin main 2>&1; then
             echo "   ✅ 成功推送至 GitHub 仓库: https://github.com/Zachary-du/aidict"
         else

@@ -1,15 +1,14 @@
 import AppKit
 import Foundation
 
-/// 智能双击查词监听器：
-/// 1. 应用内双击无缝跳转：在词典主窗口、HUD、AI 智能问答、影视原声等界面中，双击任意英文单词立即跳转查词。
-/// 2. 全局双击快速取词：在 Safari、Chrome、备忘录、PDF、文档等任意第三方应用中双击英文单词，自动弹出 HUD 浮窗查词。
+/// 应用内双击查词监听器：
+/// 严格仅限制在软件内部生效（主窗口、HUD 浮窗、AI 对话、影视原声等查词界面）。
+/// 当用户在查词结果中看到任意生词时，直接双击该生词即可无缝跳转并查询，绝不监听或干扰外部网页、桌面及其他软件。
 @MainActor
 public final class DoubleClickMonitor {
     public static let shared = DoubleClickMonitor()
 
     private var localMonitor: Any?
-    private var globalMonitor: Any?
     private var lastLookupTime: TimeInterval = 0
     private var lastLookupWord: String = ""
 
@@ -18,21 +17,12 @@ public final class DoubleClickMonitor {
     public func start() {
         stop()
 
-        // 1. 本地事件监听（MacDict 自身所有窗口：主窗口、HUD、AI 问答、影视原声名场面等）
+        // 仅注册本地事件监听器（NSEvent.addLocalMonitorForEvents 仅对本应用自身的窗口生效，绝不影响其他应用）
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseUp]) { [weak self] event in
             if event.clickCount == 2 {
                 self?.handleLocalDoubleClick(event: event)
             }
             return event
-        }
-
-        // 2. 全局事件监听（系统其他所有第三方应用）
-        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseUp]) { [weak self] event in
-            if event.clickCount == 2 {
-                Task { @MainActor [weak self] in
-                    self?.handleGlobalDoubleClick(event: event)
-                }
-            }
         }
     }
 
@@ -41,17 +31,13 @@ public final class DoubleClickMonitor {
             NSEvent.removeMonitor(lm)
             localMonitor = nil
         }
-        if let gm = globalMonitor {
-            NSEvent.removeMonitor(gm)
-            globalMonitor = nil
-        }
     }
 
-    // MARK: - 应用内双击处理 (主窗口、HUD、AI 对话、影视原声等)
+    // MARK: - 词典应用内查词界面双击处理
     private func handleLocalDoubleClick(event: NSEvent) {
         guard let window = event.window else { return }
 
-        // 如果双击发生在主窗口的左侧侧边栏搜索框/历史区域内，不打扰用户的正常输入与编辑
+        // 如果双击发生在主窗口左侧侧边栏搜索框/历史列表内，不干扰用户日常的输入编辑
         if window === MainWindowController.shared.window {
             let loc = event.locationInWindow
             if loc.x < 240 {
@@ -59,14 +45,16 @@ public final class DoubleClickMonitor {
             }
         }
 
-        // 延迟 40ms，确保 AppKit 文本渲染层与 field editor 彻底完成选区构建
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.04) { [weak self] in
+        let loc = event.locationInWindow
+
+        // 稍微等待 35ms，确保 AppKit 文本渲染层与 field editor 彻底完成选区建立
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.035) { [weak self] in
             guard let self = self else { return }
 
-            // 优先从具有选区的文本控件提取
-            var candidate: String? = self.extractSelectedWord(from: window)
+            // 多级智能提取当前双击位置的词汇
+            var candidate: String? = self.extractSelectedWord(from: window, at: loc)
 
-            // 若选区为空，通过辅助功能 / 光标位置嗅探单词
+            // 若选区未能提供，通过文本嗅探器在鼠标光标处提取
             if candidate == nil {
                 let mousePos = NSEvent.mouseLocation
                 if let sniffed = TextSniffer.shared.getTextAtCursor(screenPoint: mousePos) {
@@ -76,7 +64,7 @@ public final class DoubleClickMonitor {
 
             guard let raw = candidate, let word = Self.cleanLookupWord(raw) else { return }
 
-            // 0.4 秒防抖：避免短时间内同一单词高频触发
+            // 0.4 秒防抖：避免短时间内同一单词高频重复触发
             let now = ProcessInfo.processInfo.systemUptime
             if word.lowercased() == self.lastLookupWord.lowercased() && (now - self.lastLookupTime) < 0.4 {
                 return
@@ -84,76 +72,33 @@ public final class DoubleClickMonitor {
             self.lastLookupWord = word
             self.lastLookupTime = now
 
-            // 根据双击所在的界面执行对应跳转
+            // 词典内部直接跳转查词
             if window === MainWindowController.shared.window {
-                // 主窗口内双击：直接在主窗口中无缝导航至该词条
+                // 词典主窗口内双击：右侧详情和顶部搜索栏无缝跳转至该生词
                 MainWindowController.shared.lookupFromDoubleClick(word)
             } else if window === HUDPanel.shared {
-                // HUD 浮窗内双击：直接在浮窗内查词
+                // HUD 浮窗内双击：直接在 HUD 浮窗内查询该生词
                 DictionaryEngine.shared.lookup(word: word, triggerSource: .manual)
             } else if window === MovieSceneWindowController.shared.window {
-                // 影视原声窗口内双击：同步更新影视台词与词条释义
+                // 影视原声窗口内双击：同步更新影视台词名场面与词典释义
                 MovieSceneWindowController.shared.show(word: word)
                 DictionaryEngine.shared.lookup(word: word, triggerSource: .manual)
             } else {
-                // 其他窗口内双击：全局查询
+                // 其他软件内窗口双击：直接执行查词
                 DictionaryEngine.shared.lookup(word: word, triggerSource: .manual)
             }
         }
     }
 
-    // MARK: - 全局第三方应用双击处理 (Safari/Chrome/Notes/Word/PDF等)
-    private func handleGlobalDoubleClick(event: NSEvent) {
-        guard SettingsStore.shared.isDoubleClickLookupEnabled else { return }
-
-        // 避免干扰访达 Finder 中双击打开文件夹或运行应用的行为
-        if let frontApp = NSWorkspace.shared.frontmostApplication,
-           frontApp.bundleIdentifier == "com.apple.finder" {
-            return
-        }
-
-        let mousePos = NSEvent.mouseLocation
-
-        // 延迟 50ms 等待前台应用完成文本选区高亮
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-            guard let self = self else { return }
-
-            var sniffed = TextSniffer.shared.getSelectedTextFromFrontmostApp()
-            if sniffed == nil {
-                sniffed = TextSniffer.shared.getTextAtCursor(screenPoint: mousePos)
-            }
-
-            guard let s = sniffed, let word = Self.cleanLookupWord(s.word) else { return }
-
-            // 单词长度限制：至少 2 个字母，杜绝无意义单字符误触
-            guard word.count >= 2 else { return }
-
-            let now = ProcessInfo.processInfo.systemUptime
-            if word.lowercased() == self.lastLookupWord.lowercased() && (now - self.lastLookupTime) < 0.6 {
-                return
-            }
-            self.lastLookupWord = word
-            self.lastLookupTime = now
-
-            // 弹出 HUD 浮窗并执行查询
-            HUDPanel.shared.show(at: mousePos, source: .manual)
-            DictionaryEngine.shared.lookup(word: word, context: s.contextSentence, sourceApp: s.sourceAppName)
-
-            if SettingsStore.shared.playAudioOnLookup {
-                AudioPlayer.shared.speak(text: word)
-            }
-        }
-    }
-
-    // MARK: - 辅助：从窗口中提取选中文本
-    private func extractSelectedWord(from window: NSWindow) -> String? {
+    // MARK: - 辅助：多层次精准提取窗口中被双击选中的文本
+    private func extractSelectedWord(from window: NSWindow, at pointInWindow: NSPoint) -> String? {
+        // 1. 优先检查当前聚焦的文本输入框或选区编辑器
         if let tv = window.firstResponder as? NSTextView {
             let range = tv.selectedRange()
             if range.location != NSNotFound && range.length > 0 {
-                let str = (tv.string as NSString).substring(with: range)
-                let trimmed = str.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !trimmed.isEmpty {
-                    return trimmed
+                let str = (tv.string as NSString).substring(with: range).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !str.isEmpty {
+                    return str
                 }
             }
         }
@@ -162,14 +107,60 @@ public final class DoubleClickMonitor {
            let editor = field.currentEditor() as? NSTextView {
             let range = editor.selectedRange()
             if range.location != NSNotFound && range.length > 0 {
-                let str = (editor.string as NSString).substring(with: range)
-                let trimmed = str.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !trimmed.isEmpty {
-                    return trimmed
+                let str = (editor.string as NSString).substring(with: range).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !str.isEmpty {
+                    return str
                 }
             }
         }
 
+        // 2. 检查鼠标点击位置下的命中视图 (hitTest)
+        if let hit = window.contentView?.hitTest(pointInWindow) {
+            if let tv = hit as? NSTextView {
+                let range = tv.selectedRange()
+                if range.location != NSNotFound && range.length > 0 {
+                    let str = (tv.string as NSString).substring(with: range).trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !str.isEmpty {
+                        return str
+                    }
+                }
+            }
+            if let tf = hit as? NSTextField, let editor = tf.currentEditor() as? NSTextView {
+                let range = editor.selectedRange()
+                if range.location != NSNotFound && range.length > 0 {
+                    let str = (editor.string as NSString).substring(with: range).trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !str.isEmpty {
+                        return str
+                    }
+                }
+            }
+        }
+
+        // 3. 递归查找窗口内容中任意具有有效选区的 NSTextView
+        if let contentView = window.contentView {
+            if let selected = findActiveSelectedText(in: contentView) {
+                return selected
+            }
+        }
+
+        return nil
+    }
+
+    private func findActiveSelectedText(in view: NSView) -> String? {
+        if let tv = view as? NSTextView {
+            let range = tv.selectedRange()
+            if range.location != NSNotFound && range.length > 0 {
+                let str = (tv.string as NSString).substring(with: range).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !str.isEmpty {
+                    return str
+                }
+            }
+        }
+        for sub in view.subviews {
+            if let found = findActiveSelectedText(in: sub) {
+                return found
+            }
+        }
         return nil
     }
 

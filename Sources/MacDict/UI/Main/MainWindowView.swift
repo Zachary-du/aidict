@@ -267,6 +267,37 @@ public struct MainWindowView: View {
                     }
                 }
             }
+
+            // 侧边栏底部版本与设置信息
+            Divider().opacity(0.6)
+            HStack(spacing: 6) {
+                Text("MacDict")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.secondary)
+
+                Text("v\(UpdateManager.currentVersion)")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundColor(.secondary.opacity(0.85))
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(Color.secondary.opacity(0.1))
+                    .cornerRadius(3)
+
+                Spacer()
+
+                Button(action: {
+                    StatusMenuController.shared.openSettingsAction()
+                }) {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary.opacity(0.8))
+                }
+                .buttonStyle(.plain)
+                .help("偏好设置 (⌘,)")
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(Color(NSColor.controlBackgroundColor).opacity(0.35))
         }
         .background(Color(NSColor.windowBackgroundColor))
     }

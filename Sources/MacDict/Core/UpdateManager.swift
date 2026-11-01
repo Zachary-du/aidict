@@ -8,8 +8,8 @@ public final class UpdateManager: ObservableObject {
     public static let shared = UpdateManager()
 
     /// 当前应用版本号
-    public static let currentVersion = "1.1.0"
-    public static let buildNumber = "110"
+    public static let currentVersion = "1.2.0"
+    public static let buildNumber = "120"
     public static let repoURL = "https://github.com/Zachary-du/aidict"
     public static let apiLatestReleaseURL = "https://api.github.com/repos/Zachary-du/aidict/releases/latest"
 

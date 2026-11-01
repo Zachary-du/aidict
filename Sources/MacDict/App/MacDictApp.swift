@@ -325,8 +325,8 @@ struct MacDictApp: App {
 
                 // 9. 版本号与自动更新服务自检 (UpdateManager & SettingsStore)
                 print("\n[测试组 9] 版本号与自动更新服务自检 (UpdateManager & SettingsStore)")
-                assertTest(UpdateManager.currentVersion == "1.1.0", "应用主版本号正确标注为 1.1.0")
-                assertTest(UpdateManager.buildNumber == "110", "构建版本号为 110")
+                assertTest(UpdateManager.currentVersion == "1.2.0", "应用主版本号正确升级为 1.2.0")
+                assertTest(UpdateManager.buildNumber == "120", "构建版本号为 120")
                 assertTest(!SettingsStore.defaultSystemPrompt.isEmpty, "默认系统提示词模板不为空且已内置")
                 assertTest(!SettingsStore.defaultUserPromptTemplate.isEmpty, "默认用户提示词模板不为空且已内置")
                 assertTest(SettingsStore.shared.aiSystemPrompt.contains("语言学专家"), "SettingsStore 返回有效系统提示词")
